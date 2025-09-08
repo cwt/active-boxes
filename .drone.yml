@@ -8,15 +8,15 @@ steps:
       - pip install -r requirements.txt
       - pip install black flake8 mypy
       - black --check .
-      - flake8 little_boxes
-      - mypy --ignore-missing-imports little_boxes
+      - flake8 active_boxes
+      - mypy --ignore-missing-imports active_boxes
 
   - name: test
     image: python:3
     commands:
       - pip install -r requirements.txt
-      - pip install -r dev-requirements.txt
-      - python -m pytest -vv --cov=little_boxes
+      - pip install -e .[dev]
+      - python -m pytest -vv --cov=active_boxes
       - codecov
 ---
 kind: signature

@@ -3,8 +3,8 @@ import logging
 from unittest import mock
 
 import pytest
-from little_boxes import urlutils
-from little_boxes import webfinger
+from active_boxes import urlutils
+from active_boxes import webfinger
 
 import httpretty
 
@@ -33,8 +33,8 @@ _WEBFINGER_RESP = {
 }
 
 
-@mock.patch("little_boxes.webfinger.check_url", return_value=None)
-@mock.patch("little_boxes.backend.check_url", return_value=None)
+@mock.patch("active_boxes.webfinger.check_url", return_value=None)
+@mock.patch("active_boxes.backend.check_url", return_value=None)
 @httpretty.activate
 def test_webfinger(_, _1):
     # FIXME(tsileo): it should try https first

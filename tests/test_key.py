@@ -1,4 +1,4 @@
-from little_boxes.key import Key
+from active_boxes.key import Key
 
 
 def test_key_new_load():

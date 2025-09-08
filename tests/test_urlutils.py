@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from little_boxes import urlutils
+from active_boxes import urlutils
 
 
 def test_urlutils_reject_invalid_scheme():

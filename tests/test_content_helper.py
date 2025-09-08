@@ -1,8 +1,8 @@
 import logging
 from unittest import mock
 
-from little_boxes import activitypub as ap
-from little_boxes import content_helper
+from active_boxes import activitypub as ap
+from active_boxes import content_helper
 
 from test_backend import InMemBackend
 
@@ -29,7 +29,7 @@ def test_little_content_helper_linkify():
 
 
 @mock.patch(
-    "little_boxes.content_helper.get_actor_url", return_value="https://microblog.pub"
+    "active_boxes.content_helper.get_actor_url", return_value="https://microblog.pub"
 )
 def test_little_content_helper_mention(_):
     back = InMemBackend()
@@ -54,7 +54,7 @@ def test_little_content_helper_mention(_):
 
 
 @mock.patch(
-    "little_boxes.content_helper.get_actor_url", return_value="https://microblog.pub"
+    "active_boxes.content_helper.get_actor_url", return_value="https://microblog.pub"
 )
 def test_little_content_helper_tag(_):
     back = InMemBackend()

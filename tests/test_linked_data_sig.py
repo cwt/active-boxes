@@ -1,8 +1,8 @@
 import json
 import logging
 
-from little_boxes import linked_data_sig
-from little_boxes.key import Key
+from active_boxes import linked_data_sig
+from active_boxes.key import Key
 
 logging.basicConfig(level=logging.DEBUG)
 

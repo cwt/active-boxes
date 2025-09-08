@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "active-boxes"
+description = "Tiny ActivityPub framework written in Python, both database and server agnostic."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Chaiwat Suttipongsakul", email = "cwt@bashell.com"},
+]
+requires-python = ">=3.6.0"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
+dependencies = [
+    "requests",
+    "markdown",
+    "bleach",
+    "pyld",
+    "pycryptodome",
+    "html2text",
+    "mdx_linkify",
+    "regex",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "httpretty",
+    "black",
+    "codecov",
+    "flake8",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/cwt/active-boxes"
+
+[tool.setuptools_scm]

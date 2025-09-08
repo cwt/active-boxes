@@ -1,9 +1,9 @@
 import logging
 
 import requests
-from little_boxes import activitypub as ap
-from little_boxes import httpsig
-from little_boxes.key import Key
+from active_boxes import activitypub as ap
+from active_boxes import httpsig
+from active_boxes.key import Key
 
 import httpretty
 from test_backend import InMemBackend

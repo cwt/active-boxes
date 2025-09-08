@@ -2,8 +2,8 @@ import json
 from typing import List
 from typing import Optional
 
-import little_boxes.activitypub as ap
-from little_boxes.backend import Backend
+import active_boxes.activitypub as ap
+from active_boxes.backend import Backend
 
 
 def track_call(f):

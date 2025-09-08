@@ -20,7 +20,7 @@ from .urlutils import URLLookupFailedError
 from .urlutils import check_url as check_url
 
 if typing.TYPE_CHECKING:
-    from little_boxes import activitypub as ap  # noqa: type checking
+    from active_boxes import activitypub as ap  # noqa: type checking
 
 
 class Backend(abc.ABC):
@@ -33,7 +33,7 @@ class Backend(abc.ABC):
 
     def user_agent(self) -> str:
         return (
-            f"{requests.utils.default_user_agent()} (Little Boxes/{__version__};"
+            f"{requests.utils.default_user_agent()} (Active Boxes/{__version__};"
             " +http://github.com/tsileo/little-boxes)"
         )
 
