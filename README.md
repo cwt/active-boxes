@@ -11,6 +11,7 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 
 - [x] Migrated from `setup.py` to `pyproject.toml`
 - [x] Moved development dependencies to `pyproject.toml`
+- [x] Switched to Poetry for dependency management and building
 - [ ] More modernization steps to come...
 
 ## Original Project

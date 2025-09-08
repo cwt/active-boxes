@@ -5,18 +5,18 @@ steps:
   - name : lint
     image: python:3
     commands:
-      - pip install -r requirements.txt
-      - pip install black flake8 mypy
-      - black --check .
-      - flake8 active_boxes
-      - mypy --ignore-missing-imports active_boxes
+      - pip install poetry
+      - poetry install --only dev
+      - poetry run black --check .
+      - poetry run flake8 active_boxes
+      - poetry run mypy --ignore-missing-imports active_boxes
 
   - name: test
     image: python:3
     commands:
-      - pip install -r requirements.txt
-      - pip install -e .[dev]
-      - python -m pytest -vv --cov=active_boxes
+      - pip install poetry
+      - poetry install
+      - poetry run pytest -vv --cov=active_boxes
       - codecov
 ---
 kind: signature

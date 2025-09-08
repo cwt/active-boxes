@@ -1,11 +1,36 @@
-*.sw[op]
-key_*.pem
+*.py[cod]
 
-.coverage
-coverage.xml
+# C extensions
+*.so
+
+# Packages
+*.egg
 *.egg-info
-dist/
-.pytest_cache
-.mypy_cache/
-__pycache__/
-docs/_build
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+
+# Databases
+*.sqlite3
+*.sqlite
+*.db
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+htmlcov
+
+# Local settings
+my_settings.py

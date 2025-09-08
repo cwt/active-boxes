@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "active-boxes"
@@ -20,17 +20,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dynamic = ["version"]
-dependencies = [
-    "requests",
-    "markdown",
-    "bleach",
-    "pyld",
-    "pycryptodome",
-    "html2text",
-    "mdx_linkify",
-    "regex",
-]
+version = "0.0.1.dev2"
 
 [project.optional-dependencies]
 dev = [
@@ -46,4 +36,32 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/cwt/active-boxes"
 
-[tool.setuptools_scm]
+[tool.poetry]
+name = "active-boxes"
+version = "0.1.0a1"
+description = "Tiny ActivityPub framework written in Python, both database and server agnostic."
+authors = ["Chaiwat Suttipongsakul <cwt@bashell.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/cwt/active-boxes"
+repository = "https://github.com/cwt/active-boxes"
+
+[tool.poetry.dependencies]
+python = ">=3.6.0"
+requests = "*"
+markdown = "*"
+bleach = "*"
+pyld = "*"
+pycryptodome = "*"
+html2text = "*"
+mdx_linkify = "*"
+regex = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+httpretty = "*"
+black = "*"
+codecov = "*"
+flake8 = "*"
+mypy = "*"

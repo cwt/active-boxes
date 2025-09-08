@@ -1,3 +1,11 @@
-VERSION = (0, 0, 1, 'pre-alpha')  # pragma: no cover
+try:
+    import importlib.metadata as importlib_metadata
+except ImportError:
+    # Python < 3.8
+    import importlib_metadata
 
-__version__ = ".".join(map(str, VERSION))  # pragma: no cover
+try:
+    __version__ = importlib_metadata.version("active-boxes")
+except importlib_metadata.PackageNotFoundError:
+    # Package is not installed
+    __version__ = "unknown"
