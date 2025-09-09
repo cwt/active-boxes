@@ -7,16 +7,12 @@ from active_boxes.errors import (
     UnexpectedActivityTypeError,
     Error,
 )
-from test_backend import InMemBackend
 
 
-def test_base_activity_exceptions():
+def test_base_activity_exceptions(backend):
     """Test exception paths in BaseActivity initialization."""
-    back = InMemBackend()
-    ap.use_backend(back)
-
     # Add actor to mock data
-    back.FETCH_MOCK["https://example.com/person/1"] = {
+    backend.FETCH_MOCK["https://example.com/person/1"] = {
         "type": "Person",
         "id": "https://example.com/person/1",
         "name": "Test User",
@@ -52,17 +48,11 @@ def test_base_activity_exceptions():
             object={},  # Empty dict
         )
 
-    # Restore backend
-    ap.use_backend(None)
 
-
-def test_get_object_id_exceptions():
+def test_get_object_id_exceptions(backend):
     """Test exception paths in get_object_id method."""
-    back = InMemBackend()
-    ap.use_backend(back)
-
     # Add actor to mock data
-    back.FETCH_MOCK["https://example.com/person/1"] = {
+    backend.FETCH_MOCK["https://example.com/person/1"] = {
         "type": "Person",
         "id": "https://example.com/person/1",
         "name": "Test User",
@@ -92,17 +82,11 @@ def test_get_object_id_exceptions():
     with pytest.raises(ValueError, match="invalid object"):
         activity.get_object_id()
 
-    # Restore backend
-    ap.use_backend(None)
 
-
-def test_get_actor_exceptions():
+def test_get_actor_exceptions(backend):
     """Test exception paths in get_actor method."""
-    back = InMemBackend()
-    ap.use_backend(back)
-
     # Add actors to mock data
-    back.FETCH_MOCK["https://example.com/person/1"] = {
+    backend.FETCH_MOCK["https://example.com/person/1"] = {
         "type": "Person",
         "id": "https://example.com/person/1",
         "name": "Test User",
@@ -112,7 +96,7 @@ def test_get_actor_exceptions():
     }
 
     # Test get_actor with invalid actor type
-    back.FETCH_MOCK["https://example.com/invalid/actor"] = {
+    backend.FETCH_MOCK["https://example.com/invalid/actor"] = {
         "type": "InvalidActorType",
         "id": "https://example.com/invalid/actor",
     }
@@ -130,24 +114,12 @@ def test_get_actor_exceptions():
             },
         )
 
-    # Restore backend
-    ap.use_backend(None)
 
-
-def test_backend_functions_without_initialization():
-    """Test backend functions when no backend is initialized."""
-    # Save current backend
-    current_backend = ap.BACKEND
-
-    # Unset backend
-    ap.use_backend(None)
-
+def test_get_backend_without_initialization():
+    """Test that get_backend raises error when no backend is initialized."""
     # Test get_backend raises error
     with pytest.raises(Error):
         ap.get_backend()
-
-    # Restore backend
-    ap.use_backend(current_backend)
 
 
 def test_format_datetime_exceptions():

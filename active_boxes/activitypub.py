@@ -66,6 +66,12 @@ def get_backend() -> Backend:
     return BACKEND
 
 
+def _ensure_backend():
+    """Helper function to ensure backend is initialized."""
+    if BACKEND is None:
+        raise UninitializedBackendError
+
+
 def use_backend(backend_instance):
     global BACKEND
     BACKEND = backend_instance
@@ -461,12 +467,12 @@ class BaseActivity(object, metaclass=_ActivityMeta):
             raise BadActivityError(f'invalid "actor" field: {obj!r}')
 
     def _validate_actor(self, obj: ObjectOrIDType) -> str:
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
+        backend = get_backend()
 
         obj_id = self._actor_id(obj)
         try:
-            actor = BACKEND.fetch_iri(obj_id)
+            actor = backend.fetch_iri(obj_id)
         except (ActivityGoneError, ActivityNotFoundError):
             raise
         except Exception:
@@ -485,8 +491,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         return actor["id"]
 
     def get_object_id(self) -> str:
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
 
         if self.__obj:
             return self.__obj.id
@@ -499,15 +504,15 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
     def get_object(self) -> "BaseActivity":
         """Returns the object as a BaseActivity instance."""
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
+        backend = get_backend()
 
         if self.__obj:
             return self.__obj
         if isinstance(self._data["object"], dict):
             p = parse_activity(self._data["object"])
         else:
-            obj = BACKEND.fetch_iri(self._data["object"])
+            obj = backend.fetch_iri(self._data["object"])
             if ActivityType(obj.get("type")) not in self.ALLOWED_OBJECT_TYPES:
                 raise UnexpectedActivityTypeError(
                     f'invalid object type {obj.get("type")!r}'
@@ -544,8 +549,8 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         return data
 
     def get_actor(self) -> ActorType:
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
+        backend = get_backend()
 
         if self.__actor:
             return self.__actor[0]
@@ -567,7 +572,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
             actor_id = self._actor_id(item)
 
-            p = parse_activity(BACKEND.fetch_iri(actor_id))
+            p = parse_activity(backend.fetch_iri(actor_id))
             if not p.has_type(ACTOR_TYPES):  # type: ignore
                 raise UnexpectedActivityTypeError(f"{p!r} is not an actor")
             self.__actor.append(p)  # type: ignore
@@ -578,15 +583,15 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         return []
 
     def recipients(self) -> List[str]:  # noqa: C901
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
+        backend = get_backend()
 
         recipients = self._recipients()
         actor_id = self.get_actor().id
 
         out: List[str] = []
         if self.type == ActivityType.CREATE.value:
-            out = BACKEND.extra_inboxes()
+            out = backend.extra_inboxes()
 
         for recipient in recipients:
             if recipient in [actor_id, AS_PUBLIC, None]:
@@ -619,7 +624,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
             # Is the activity a `Collection`/`OrderedCollection`?
             elif actor.ACTIVITY_TYPE in COLLECTION_TYPES:
-                for item in BACKEND.parse_collection(actor.to_dict()):
+                for item in backend.parse_collection(actor.to_dict()):
                     # XXX(tsileo): is nested collection support needed here?
 
                     if item in [actor_id, AS_PUBLIC]:
@@ -789,19 +794,19 @@ class Delete(BaseActivity):
     OBJECT_REQUIRED = True
 
     def _get_actual_object(self) -> BaseActivity:
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
+        backend = get_backend()
 
         # XXX(tsileo): overrides get_object instead?
         obj = self.get_object()
         if (
-            obj.id.startswith(BACKEND.base_url())
+            obj.id.startswith(backend.base_url())
             and obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE
         ):
-            obj = parse_activity(BACKEND.fetch_iri(obj.id))
+            obj = parse_activity(backend.fetch_iri(obj.id))
         if obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE:
             # If we already received it, we may be able to get a copy
-            better_obj = BACKEND.fetch_iri(obj.id)
+            better_obj = backend.fetch_iri(obj.id)
             if better_obj:
                 return parse_activity(better_obj)
         return obj
@@ -845,13 +850,13 @@ class Create(BaseActivity):
         return False
 
     def _set_id(self, uri: str, obj_id: str) -> None:
-        if BACKEND is None:
-            raise UninitializedBackendError
+        _ensure_backend()
+        backend = get_backend()
 
         # FIXME(tsileo): add a BACKEND.note_activity_url, and pass the actor to both
         self._data["object"]["id"] = uri + "/activity"
         if "url" not in self._data["object"]:
-            self._data["object"]["url"] = BACKEND.note_url(obj_id)
+            self._data["object"]["url"] = backend.note_url(obj_id)
         if isinstance(self.ctx(), Note):
             try:
                 self.ctx().id = self._data["object"]["id"]
