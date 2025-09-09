@@ -1,88 +1,12 @@
-import logging
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+"""ActivityPub specific activity type tests."""
 
-import pytest
+import logging
+
 from active_boxes import activitypub as ap
-from active_boxes.errors import (
-    BadActivityError,
-)
 
 from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
-
-
-def test_format_datetime():
-    # Test with timezone aware datetime
-    dt = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
-
-    # Test with timezone aware datetime with microseconds
-    dt = datetime(2023, 1, 1, 12, 0, 0, 123456, tzinfo=timezone.utc)
-    assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
-
-    # Test with timezone aware datetime in different timezone
-    dt = datetime(2023, 1, 1, 17, 0, 0, tzinfo=timezone(timedelta(hours=5)))
-    assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
-
-    # Test with naive datetime (should raise ValueError)
-    dt = datetime(2023, 1, 1, 12, 0, 0)
-    with pytest.raises(ValueError):
-        ap.format_datetime(dt)
-
-
-def test_backend_functions():
-    # Test get_backend without initialization
-    with pytest.raises(ap.Error):
-        ap.get_backend()
-
-    # Test use_backend and get_backend
-    back = InMemBackend()
-    ap.use_backend(back)
-    assert ap.get_backend() == back
-
-    # Test use_backend with None
-    ap.use_backend(None)
-    with pytest.raises(ap.Error):
-        ap.get_backend()
-
-    # Restore backend
-    ap.use_backend(back)
-
-
-def test_activity_type_enum():
-    # Test that ActivityType enum values are correct
-    assert ap.ActivityType.CREATE.value == "Create"
-    assert ap.ActivityType.ANNOUNCE.value == "Announce"
-    assert ap.ActivityType.LIKE.value == "Like"
-    assert ap.ActivityType.NOTE.value == "Note"
-    assert ap.ActivityType.PERSON.value == "Person"
-
-
-def test_parse_activity_errors():
-    back = InMemBackend()
-    ap.use_backend(back)
-
-    # Test with None
-    with pytest.raises(BadActivityError):
-        ap.parse_activity(None)
-
-    # Test with string
-    with pytest.raises(BadActivityError):
-        ap.parse_activity("not a dict")
-
-    # Test with dict missing type
-    with pytest.raises(BadActivityError):
-        ap.parse_activity({})
-
-    # Test with unknown activity type
-    with pytest.raises(ValueError):
-        ap.parse_activity({"type": "UnknownType"})
-
-    # Restore backend
-    ap.use_backend(None)
 
 
 def test_person_activity():
@@ -169,57 +93,6 @@ def test_create_activity():
 
     # Restore backend
     ap.use_backend(None)
-
-
-def test_activity_type_checking():
-    # Test _has_type function
-    assert ap._has_type("Note", ap.ActivityType.NOTE)
-    assert ap._has_type("Note", "Note")
-    assert ap._has_type(["Note", "Article"], ap.ActivityType.NOTE)
-    assert not ap._has_type("Note", ap.ActivityType.CREATE)
-
-    # Test with multiple types
-    assert ap._has_type("Note", [ap.ActivityType.NOTE, ap.ActivityType.ARTICLE])
-    assert ap._has_type(
-        "Article", [ap.ActivityType.NOTE, ap.ActivityType.ARTICLE]
-    )
-    assert not ap._has_type(
-        "Person", [ap.ActivityType.NOTE, ap.ActivityType.ARTICLE]
-    )
-
-
-def test_get_id_function():
-    # Test _get_id function
-    assert ap._get_id(None) is None
-    assert ap._get_id("https://example.com/1") == "https://example.com/1"
-    assert (
-        ap._get_id({"id": "https://example.com/1"}) == "https://example.com/1"
-    )
-
-    with pytest.raises(ValueError, match="object is missing ID"):
-        ap._get_id({})
-
-    with pytest.raises(ValueError, match="unexpected object"):
-        ap._get_id(123)
-
-
-def test_get_actor_id_function():
-    # Test _get_actor_id function
-    assert (
-        ap._get_actor_id("https://example.com/person/1")
-        == "https://example.com/person/1"
-    )
-    assert (
-        ap._get_actor_id({"id": "https://example.com/person/1"})
-        == "https://example.com/person/1"
-    )
-
-
-def test_to_list_function():
-    # Test _to_list function
-    assert ap._to_list("item") == ["item"]
-    assert ap._to_list(["item1", "item2"]) == ["item1", "item2"]
-    assert ap._to_list(None) == [None]
 
 
 def test_collection_activities():
@@ -747,6 +620,171 @@ def test_follow_activity():
     obj = follow.get_object()
     assert isinstance(obj, ap.Person)
     assert obj.id == "https://example.com/person/2"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_note_activity_with_all_properties():
+    """Test Note activity with various properties to increase coverage."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Create a Note with various properties
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "This is a test note",
+        "attributedTo": "https://example.com/person/1",
+        "published": "2023-01-01T12:00:00Z",
+        "sensitive": True,
+        "to": ["https://example.com/public"],
+        "cc": ["https://example.com/person/2"],
+        "tag": [
+            {
+                "type": "Mention",
+                "href": "https://example.com/person/2",
+                "name": "@person2@example.com",
+            }
+        ],
+    }
+
+    note = ap.parse_activity(note_data)
+    assert isinstance(note, ap.Note)
+    assert note.id == "https://example.com/note/1"
+    assert note.content == "This is a test note"
+    assert note.attributedTo == "https://example.com/person/1"
+    assert note.published == "2023-01-01T12:00:00Z"
+    assert note.sensitive == True
+
+    # Test methods
+    assert note.has_mention("https://example.com/person/2")
+    assert not note.has_mention("https://example.com/person/3")
+
+    # Test get_in_reply_to
+    assert note.get_in_reply_to() is None
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_create_activity_with_reply():
+    """Test Create activity with inReplyTo property."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Create a Note that is a reply
+    reply_note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/2",
+        "content": "This is a reply",
+        "attributedTo": "https://example.com/person/1",
+        "inReplyTo": "https://example.com/note/1",
+    }
+
+    reply_note = ap.parse_activity(reply_note_data)
+    assert isinstance(reply_note, ap.Note)
+    assert reply_note.get_in_reply_to() == "https://example.com/note/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_collection_activities_with_items():
+    """Test Collection and OrderedCollection with various item types."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test Collection with string items
+    collection_data = {
+        "type": "Collection",
+        "id": "https://example.com/collection/1",
+        "items": ["https://example.com/item/1", "https://example.com/item/2"],
+        "totalItems": 2,
+    }
+
+    collection = ap.parse_activity(collection_data)
+    assert isinstance(collection, ap.Collection)
+    assert collection.id == "https://example.com/collection/1"
+    assert collection.totalItems == 2
+
+    # Test OrderedCollection with string items
+    ordered_collection_data = {
+        "type": "OrderedCollection",
+        "id": "https://example.com/ordered-collection/1",
+        "orderedItems": [
+            "https://example.com/item/1",
+            "https://example.com/item/2",
+        ],
+        "totalItems": 2,
+    }
+
+    ordered_collection = ap.parse_activity(ordered_collection_data)
+    assert isinstance(ordered_collection, ap.OrderedCollection)
+    assert ordered_collection.id == "https://example.com/ordered-collection/1"
+    assert ordered_collection.totalItems == 2
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_context_handling():
+    """Test context handling in activities."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test activity with custom context
+    activity_data = {
+        "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {"custom": "http://example.com#custom"},
+        ],
+        "type": "Create",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "id": "https://example.com/note/1",
+            "attributedTo": "https://example.com/person/1",
+        },
+    }
+
+    activity = ap.parse_activity(activity_data)
+    assert isinstance(activity, ap.Create)
+    # Check that context was properly handled
+    assert "https://www.w3.org/ns/activitystreams" in activity._data["@context"]
+    assert isinstance(activity._data["@context"][-1], dict)
+    # The context gets modified by the activity initialization, so just check it's a dict
 
     # Restore backend
     ap.use_backend(None)
