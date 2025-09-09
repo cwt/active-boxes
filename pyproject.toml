@@ -22,18 +22,6 @@ classifiers = [
 ]
 version = "0.0.1.dev2"
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "httpretty>=1.1.4",
-    "black>=23.0.0",
-    "codecov>=2.1.13",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
-    "ruff>=0.1.0",
-]
-
 [project.urls]
 Homepage = "https://github.com/cwt/active-boxes"
 
@@ -59,11 +47,12 @@ mdx_linkify = ">=1.5.0"
 regex = ">=2023.0.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=7.0.0"
-pytest-cov = ">=4.0.0"
 httpretty = ">=1.1.4"
 black = ">=23.0.0"
 codecov = ">=2.1.13"
 flake8 = ">=6.0.0"
-mypy = ">=1.0.0"
 ruff = ">=0.1.0"
+pytest = "^8.4"
+pytest-cov = "^6.3"
+mypy = "^1.17"
+pytest-xdist = "^3.8.0"
