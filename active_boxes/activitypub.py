@@ -495,7 +495,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         elif isinstance(self._data["object"], str):
             return self._data["object"]
         else:
-            raise ValueError(f"invalid object {self._data['object']}")
+            raise ValueError("invalid object")
 
     def get_object(self) -> "BaseActivity":
         """Returns the object as a BaseActivity instance."""
