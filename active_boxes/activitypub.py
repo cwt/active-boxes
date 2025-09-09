@@ -224,8 +224,6 @@ def _get_id(obj) -> Optional[str]:
         raise ValueError(f"unexpected object: {obj!r}")
 
 
-from typing import Sequence
-
 # ... (other imports)
 
 
@@ -308,7 +306,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 self._data["actor"] = actor
             elif self.ACTIVITY_TYPE in CREATE_TYPES:
                 if "attributedTo" not in kwargs:
-                    raise BadActivityError(f"Note is missing attributedTo")
+                    raise BadActivityError("Note is missing attributedTo")
             else:
                 raise BadActivityError("missing actor")
 
@@ -319,7 +317,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                     # The object is a just a reference the its ID/IRI
                     # FIXME(tsileo): fetch the ref
                     self._data["object"] = obj
-                case {"type": obj_type, **rest} if self.ALLOWED_OBJECT_TYPES:
+                case {"type": obj_type, **_rest} if self.ALLOWED_OBJECT_TYPES:
                     if (
                         self.ACTIVITY_TYPE != ActivityType.CREATE
                         and "id" not in obj
@@ -330,7 +328,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                             f"unexpected object type {obj_type} (allowed={self.ALLOWED_OBJECT_TYPES!r})"
                         )
                     self._data["object"] = obj
-                case {"type": _, **rest} if not self.ALLOWED_OBJECT_TYPES:
+                case {"type": _, **_rest} if not self.ALLOWED_OBJECT_TYPES:
                     raise UnexpectedActivityTypeError("unexpected object")
                 case dict():
                     raise BadActivityError("invalid object, missing type")
@@ -558,7 +556,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
             if self.ACTIVITY_TYPE in CREATE_TYPES:
                 actor = self._data.get("attributedTo")
                 if not actor:
-                    raise BadActivityError(f"missing attributedTo")
+                    raise BadActivityError("missing attributedTo")
             else:
                 raise BadActivityError(f"failed to fetch actor: {self._data!r}")
 

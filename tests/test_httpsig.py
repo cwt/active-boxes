@@ -36,7 +36,7 @@ def test_httpsig():
         mock_request.method = "POST"
         mock_request.path_url = "/"
         mock_request.headers = {
-            "Signature": f'keyId="https://lol.com#lol",algorithm="rsa-sha256",headers="(request-target) user-agent host date digest content-type",signature="dummy_signature"'
+            "Signature": 'keyId="https://lol.com#lol",algorithm="rsa-sha256",headers="(request-target) user-agent host date digest content-type",signature="dummy_signature"'
         }
         mock_request.body = json.dumps({"ok": 1}).encode("utf-8")
         mock_response.request = mock_request
@@ -79,7 +79,7 @@ def test_httpsig_key():
         mock_request.method = "POST"
         mock_request.path_url = "/"
         mock_request.headers = {
-            "Signature": f'keyId="https://lol.com/key/lol",algorithm="rsa-sha256",headers="(request-target) user-agent host date digest content-type",signature="dummy_signature"'
+            "Signature": 'keyId="https://lol.com/key/lol",algorithm="rsa-sha256",headers="(request-target) user-agent host date digest content-type",signature="dummy_signature"'
         }
         mock_request.body = json.dumps({"ok": 1}).encode("utf-8")
         mock_response.request = mock_request

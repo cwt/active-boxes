@@ -4,7 +4,7 @@ from unittest import mock
 
 from active_boxes import linked_data_sig
 from active_boxes.key import Key
-from pyld import jsonld  # type: ignore[import-untyped]
+from pyld import jsonld  # type: ignore[import-untyped]  # noqa: F401
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -79,7 +79,6 @@ IDENTITY_CONTEXT = {
         "delegator": {"@id": "perm:delegator", "@type": "@id"},
         "invoker": {"@id": "perm:invoker", "@type": "@id"},
         "caveat": {"@id": "perm:caveat", "@type": "@id", "@container": "@list"},
-        "expires": {"@id": "sec:expires", "@type": "xsd:dateTime"},
     }
 }
 
