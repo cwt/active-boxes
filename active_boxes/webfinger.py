@@ -35,6 +35,7 @@ def webfinger(
     # Security check on the url (like not calling localhost)
     check_url(f"https://{host}", debug=debug)
     is_404 = False
+    resp = None
 
     for i, proto in enumerate(protos):
         try:
@@ -54,7 +55,7 @@ def webfinger(
                 is_404 = True
                 continue
             raise
-    if is_404:
+    if is_404 or resp is None:
         return None
     resp.raise_for_status()
     try:

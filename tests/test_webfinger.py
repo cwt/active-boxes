@@ -5,8 +5,9 @@ from unittest import mock
 import pytest
 from active_boxes import urlutils
 from active_boxes import webfinger
+from active_boxes.activitypub import use_backend
 
-import httpretty
+from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -35,14 +36,18 @@ _WEBFINGER_RESP = {
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
 @mock.patch("active_boxes.backend.check_url", return_value=None)
-@httpretty.activate
-def test_webfinger(_, _1):
-    # FIXME(tsileo): it should try https first
-    httpretty.register_uri(
-        httpretty.GET,
-        "https://microblog.pub/.well-known/webfinger",
-        body=json.dumps(_WEBFINGER_RESP),
-    )
+@mock.patch("active_boxes.backend.Backend.fetch_json")
+def test_webfinger(mock_fetch_json, _, _1):
+    # Initialize backend
+    back = InMemBackend()
+    use_backend(back)
+
+    # Mock the fetch_json method to return our test response
+    mock_response = mock.Mock()
+    mock_response.json.return_value = _WEBFINGER_RESP
+    mock_response.raise_for_status.return_value = None
+    mock_fetch_json.return_value = mock_response
+
     data = webfinger.webfinger("@dev@microblog.pub")
     assert data == _WEBFINGER_RESP
 

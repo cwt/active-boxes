@@ -19,10 +19,10 @@ _CACHE: Dict[str, Any] = {}
 LOADER = jsonld.requests_document_loader()
 
 
-def _caching_document_loader(url: str) -> Any:
+def _caching_document_loader(url: str, options: Dict[str, Any] = {}) -> Any:
     if url in _CACHE:
         return _CACHE[url]
-    resp = LOADER(url)
+    resp = LOADER(url, options)
     _CACHE[url] = resp
     return resp
 
