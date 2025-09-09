@@ -431,7 +431,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
     def __getattr__(self, name: str) -> Any:
         """Allow to access the object field as regular attributes."""
-        if self._data.get(name):
+        if name in self._data:
             return self._data.get(name)
 
     def _set_id(self, uri: str, obj_id: str) -> None:
@@ -691,8 +691,8 @@ class Collection(BaseActivity):
     ACTOR_REQUIRED = False
 
 
-class OerderedCollection(BaseActivity):
-    ACTIVITY_TYPE = ActivityType.ORDERED_COLLECTION
+class CollectionPage(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.COLLECTION_PAGE
     OBJECT_REQUIRED = False
     ACTOR_REQUIRED = False
 
@@ -900,7 +900,7 @@ class Tombstone(BaseActivity):
 class Note(BaseActivity):
     ACTIVITY_TYPE = ActivityType.NOTE
     ACTOR_REQUIRED = True
-    OBJECT_REQURIED = False
+    OBJECT_REQUIRED = False
 
     def _init(self) -> None:
         if "sensitive" not in self._data:
@@ -962,7 +962,7 @@ class Note(BaseActivity):
 class Question(Note):
     ACTIVITY_TYPE = ActivityType.QUESTION
     ACTOR_REQUIRED = True
-    OBJECT_REQURIED = False
+    OBJECT_REQUIRED = False
 
     def one_of(self) -> List[Dict[str, Any]]:
         return self._data.get("oneOf", [])
@@ -971,19 +971,19 @@ class Question(Note):
 class Article(Note):
     ACTIVITY_TYPE = ActivityType.ARTICLE
     ACTOR_REQUIRED = True
-    OBJECT_REQURIED = False
+    OBJECT_REQUIRED = False
 
 
 class Page(Note):
     ACTIVITY_TYPE = ActivityType.PAGE
     ACTOR_REQUIRED = True
-    OBJECT_REQURIED = False
+    OBJECT_REQUIRED = False
 
 
 class Video(Note):
     ACTIVITY_TYPE = ActivityType.VIDEO
     ACTOR_REQUIRED = True
-    OBJECT_REQURIED = False
+    OBJECT_REQUIRED = False
 
 
 class Document(Note):
@@ -996,6 +996,18 @@ class Audio(Note):
     ACTIVITY_TYPE = ActivityType.AUDIO
     ACTOR_REQUIRED = True
     OBJECT_REQUIRED = False
+
+
+class OrderedCollection(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.ORDERED_COLLECTION
+    OBJECT_REQUIRED = False
+    ACTOR_REQUIRED = False
+
+
+class OrderedCollectionPage(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.ORDERED_COLLECTION_PAGE
+    OBJECT_REQUIRED = False
+    ACTOR_REQUIRED = False
 
 
 def fetch_remote_activity(
