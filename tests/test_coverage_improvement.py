@@ -5,7 +5,6 @@ from active_boxes import activitypub as ap
 from active_boxes.errors import (
     Error,
     BadActivityError,
-    UnexpectedActivityTypeError,
 )
 from test_backend import InMemBackend
 
@@ -225,8 +224,12 @@ def test_get_url_method():
         ],
     }
     note_list_url = ap.parse_activity(note_data_list_url)
-    assert note_list_url.get_url() == "https://example.com/note/4.html"  # Should return HTML version
-    assert note_list_url.get_url("text/plain") == "https://example.com/note/4.txt"  # Should return TXT version
+    assert (
+        note_list_url.get_url() == "https://example.com/note/4.html"
+    )  # Should return HTML version
+    assert (
+        note_list_url.get_url("text/plain") == "https://example.com/note/4.txt"
+    )  # Should return TXT version
 
     # Test with list of URLs (no preferred mime type found)
     note_data_list_url_fallback = {
@@ -243,7 +246,11 @@ def test_get_url_method():
         ],
     }
     note_list_url_fallback = ap.parse_activity(note_data_list_url_fallback)
-    assert note_list_url_fallback.get_url("text/html") == {"type": "Link", "href": "https://example.com/note/5.txt", "mimeType": "text/plain"}  # Should fallback to first object
+    assert note_list_url_fallback.get_url("text/html") == {
+        "type": "Link",
+        "href": "https://example.com/note/5.txt",
+        "mimeType": "text/plain",
+    }  # Should fallback to first object
 
     # Test with list of URLs (invalid type in list)
     note_data_list_invalid_url = {
@@ -558,7 +565,7 @@ def test_base_activity_ctx_methods():
     # Test set_ctx method (using a proper object that can be weakly referenced)
     class TestContext:
         pass
-    
+
     ctx_obj = TestContext()
     note.set_ctx(ctx_obj)
     # ctx method should return the context object
@@ -597,17 +604,14 @@ def test_actor_id_method():
     assert result == "https://example.com/person/1"
 
     # Test with dict containing valid actor
-    result = note._actor_id({
-        "type": "Person",
-        "id": "https://example.com/person/1"
-    })
+    result = note._actor_id(
+        {"type": "Person", "id": "https://example.com/person/1"}
+    )
     assert result == "https://example.com/person/1"
 
     # Test with dict missing id
     with pytest.raises(BadActivityError, match="missing object id"):
-        note._actor_id({
-            "type": "Person"
-        })
+        note._actor_id({"type": "Person"})
 
     # Test with invalid actor field
     with pytest.raises(BadActivityError, match='invalid "actor" field'):
