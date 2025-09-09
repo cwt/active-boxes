@@ -46,7 +46,9 @@ def test_webfinger(_, _1):
     data = webfinger.webfinger("@dev@microblog.pub")
     assert data == _WEBFINGER_RESP
 
-    assert webfinger.get_actor_url("@dev@microblog.pub") == "https://microblog.pub"
+    assert (
+        webfinger.get_actor_url("@dev@microblog.pub") == "https://microblog.pub"
+    )
     assert (
         webfinger.get_remote_follow_template("@dev@microblog.pub")
         == "https://microblog.pub/authorize_follow?profile={uri}"

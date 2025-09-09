@@ -3,6 +3,7 @@
 Mastodon instances won't accept requests that are not signed using this scheme.
 
 """
+
 import base64
 import hashlib
 import logging
@@ -97,7 +98,9 @@ def verify_request(method: str, path: str, headers: Any, body: str) -> bool:
         logger.debug("cannot get public key")
         return False
 
-    return _verify_h(signed_string, base64.b64decode(hsig["signature"]), k.pubkey)
+    return _verify_h(
+        signed_string, base64.b64decode(hsig["signature"]), k.pubkey
+    )
 
 
 class HTTPSigAuth(AuthBase):

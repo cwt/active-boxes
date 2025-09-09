@@ -32,7 +32,9 @@ def hashtagify(content: str) -> Tuple[str, List[Dict[str, str]]]:
     for hashtag in hashtags:
         tag = hashtag[1:]
         link = f'<a href="{base_url}/tags/{tag}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'
-        tags.append(dict(href=f"{base_url}/tags/{tag}", name=hashtag, type="Hashtag"))
+        tags.append(
+            dict(href=f"{base_url}/tags/{tag}", name=hashtag, type="Hashtag")
+        )
         content = content.replace(hashtag, link)
     return content, tags
 

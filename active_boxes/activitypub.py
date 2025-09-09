@@ -1,4 +1,5 @@
 """Core ActivityPub classes."""
+
 import logging
 import weakref
 from datetime import datetime
@@ -186,7 +187,7 @@ def _to_list(data: Union[List[Any], Any]) -> List[Any]:
 
 def clean_activity(activity: ObjectType) -> Dict[str, Any]:
     """Clean the activity before rendering it.
-     - Remove the hidden bco and bcc field
+    - Remove the hidden bco and bcc field
     """
     for field in ["bto", "bcc", "source"]:
         if field in activity:
@@ -250,14 +251,12 @@ class _ActivityMeta(type):
 class BaseActivity(object, metaclass=_ActivityMeta):
     """Base class for ActivityPub activities."""
 
-    ACTIVITY_TYPE: Optional[
-        ActivityType
-    ] = None  # the ActivityTypeEnum the class will represent
+    ACTIVITY_TYPE: Optional[ActivityType] = (
+        None  # the ActivityTypeEnum the class will represent
+    )
     OBJECT_REQUIRED = False  # Whether the object field is required or note
     ALLOWED_OBJECT_TYPES: List[ActivityType] = []
-    ACTOR_REQUIRED = (
-        True
-    )  # Most of the object requires an actor, so this flag in on by default
+    ACTOR_REQUIRED = True  # Most of the object requires an actor, so this flag in on by default
 
     def __init__(self, **kwargs) -> None:  # noqa: C901
         if not self.ACTIVITY_TYPE:
@@ -276,7 +275,9 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 )
             self._data["type"] = atype
 
-        logger.debug(f"initializing a {self.ACTIVITY_TYPE.value} activity: {kwargs!r}")
+        logger.debug(
+            f"initializing a {self.ACTIVITY_TYPE.value} activity: {kwargs!r}"
+        )
 
         # A place to set ephemeral data
         self.__ctx: Any = {}
@@ -310,7 +311,8 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 if not self.ALLOWED_OBJECT_TYPES:
                     raise UnexpectedActivityTypeError("unexpected object")
                 if "type" not in obj or (
-                    self.ACTIVITY_TYPE != ActivityType.CREATE and "id" not in obj
+                    self.ACTIVITY_TYPE != ActivityType.CREATE
+                    and "id" not in obj
                 ):
                     raise BadActivityError("invalid object, missing type")
                 if not _has_type(  # type: ignore  # XXX too complicated
@@ -409,7 +411,9 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
     def __repr__(self) -> str:
         """Pretty repr."""
-        return "{}({!r})".format(self.__class__.__qualname__, self._data.get("id"))
+        return "{}({!r})".format(
+            self.__class__.__qualname__, self._data.get("id")
+        )
 
     def __str__(self) -> str:
         """Returns the ID/IRI when castign to str."""
@@ -464,7 +468,9 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         if not _has_type(  # type: ignore  # XXX: too complicated
             actor["type"], ACTOR_TYPES
         ):
-            raise UnexpectedActivityTypeError(f'actor has wrong type {actor["type"]!r}')
+            raise UnexpectedActivityTypeError(
+                f'actor has wrong type {actor["type"]!r}'
+            )
 
         return actor["id"]
 
@@ -578,7 +584,11 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
             try:
                 actor = fetch_remote_activity(recipient)
-            except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
+            except (
+                ActivityGoneError,
+                ActivityNotFoundError,
+                NotAnActivityError,
+            ):
                 logger.info(f"{recipient} is gone")
                 continue
             except ActivityUnavailableError:

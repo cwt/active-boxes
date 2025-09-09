@@ -45,7 +45,10 @@ class Backend(abc.ABC):
         self.check_url(url)
         resp = requests.get(
             url,
-            headers={"User-Agent": self.user_agent(), "Accept": "application/json"},
+            headers={
+                "User-Agent": self.user_agent(),
+                "Accept": "application/json",
+            },
             **kwargs,
             timeout=15,
             allow_redirects=True,
@@ -56,9 +59,13 @@ class Backend(abc.ABC):
         return resp
 
     def parse_collection(
-        self, payload: Optional[Dict[str, Any]] = None, url: Optional[str] = None
+        self,
+        payload: Optional[Dict[str, Any]] = None,
+        url: Optional[str] = None,
     ) -> List[str]:
-        return parse_collection(payload=payload, url=url, fetcher=self.fetch_iri)
+        return parse_collection(
+            payload=payload, url=url, fetcher=self.fetch_iri
+        )
 
     def extra_inboxes(self) -> List[str]:
         """Allows to define inboxes that will be part of of the recipient for every activity."""
@@ -73,7 +80,9 @@ class Backend(abc.ABC):
     def base_url(self) -> str:
         pass  # pragma: no cover
 
-    def fetch_iri(self, iri: str, **kwargs) -> "ap.ObjectType":  # pragma: no cover
+    def fetch_iri(
+        self, iri: str, **kwargs
+    ) -> "ap.ObjectType":  # pragma: no cover
         if not iri.startswith("http"):
             raise NotAnActivityError(f"{iri} is not a valid IRI")
 
@@ -81,7 +90,9 @@ class Backend(abc.ABC):
             self.check_url(iri)
         except URLLookupFailedError:
             # The IRI is inaccessible
-            raise ActivityUnavailableError(f"unable to fetch {iri}, url lookup failed")
+            raise ActivityUnavailableError(
+                f"unable to fetch {iri}, url lookup failed"
+            )
 
         try:
             resp = requests.get(
@@ -99,7 +110,9 @@ class Backend(abc.ABC):
             requests.exceptions.ReadTimeout,
             requests.exceptions.ConnectionError,
         ):
-            raise ActivityUnavailableError(f"unable to fetch {iri}, connection error")
+            raise ActivityUnavailableError(
+                f"unable to fetch {iri}, connection error"
+            )
         if resp.status_code == 404:
             raise ActivityNotFoundError(f"{iri} is not found")
         elif resp.status_code == 410:

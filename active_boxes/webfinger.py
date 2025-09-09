@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 def webfinger(
     resource: str, debug: bool = False
 ) -> Optional[Dict[str, Any]]:  # noqa: C901
-    """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL.
-    """
+    """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL."""
     logger.info(f"performing webfinger resolution for {resource}")
     protos = ["https", "http"]
     if resource.startswith("http://"):
@@ -64,7 +63,9 @@ def webfinger(
         return None
 
 
-def get_remote_follow_template(resource: str, debug: bool = False) -> Optional[str]:
+def get_remote_follow_template(
+    resource: str, debug: bool = False
+) -> Optional[str]:
     data = webfinger(resource, debug=debug)
     if data is None:
         return None

@@ -1,4 +1,5 @@
 """Errors raised by this package."""
+
 from typing import Any
 from typing import Dict
 from typing import Optional

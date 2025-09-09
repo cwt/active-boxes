@@ -43,7 +43,10 @@ def test_unexpected_activity_type():
     back = InMemBackend()
     ap.use_backend(back)
 
-    back.FETCH_MOCK["https://lol.com"] = {"type": "Actor", "id": "https://lol.com"}
+    back.FETCH_MOCK["https://lol.com"] = {
+        "type": "Actor",
+        "id": "https://lol.com",
+    }
 
     with pytest.raises(UnexpectedActivityTypeError):
         parse_collection(url="https://lol.com", fetcher=back.fetch_iri)

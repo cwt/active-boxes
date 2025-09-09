@@ -40,7 +40,9 @@ def is_url_valid(url: str, debug: bool = False) -> bool:
         ip_address = ipaddress.ip_address(parsed.hostname)
     except ValueError:
         try:
-            ip_address = socket.getaddrinfo(parsed.hostname, parsed.port or 80)[0][4][0]
+            ip_address = socket.getaddrinfo(parsed.hostname, parsed.port or 80)[
+                0
+            ][4][0]
             logger.debug(f"dns lookup: {parsed.hostname} -> {ip_address}")
         except socket.gaierror:
             logger.exception(f"failed to lookup url {url}")

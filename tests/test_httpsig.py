@@ -24,10 +24,14 @@ def test_httpsig():
         "type": "Person",
     }
 
-    httpretty.register_uri(httpretty.POST, "https://remote-instance.com", body="ok")
+    httpretty.register_uri(
+        httpretty.POST, "https://remote-instance.com", body="ok"
+    )
 
     auth = httpsig.HTTPSigAuth(k)
-    resp = requests.post("https://remote-instance.com", json={"ok": 1}, auth=auth)
+    resp = requests.post(
+        "https://remote-instance.com", json={"ok": 1}, auth=auth
+    )
 
     assert httpsig.verify_request(
         resp.request.method,
@@ -46,10 +50,14 @@ def test_httpsig_key():
     k.new()
     back.FETCH_MOCK["https://lol.com/key/lol"] = k.to_dict()
 
-    httpretty.register_uri(httpretty.POST, "https://remote-instance.com", body="ok")
+    httpretty.register_uri(
+        httpretty.POST, "https://remote-instance.com", body="ok"
+    )
 
     auth = httpsig.HTTPSigAuth(k)
-    resp = requests.post("https://remote-instance.com", json={"ok": 1}, auth=auth)
+    resp = requests.post(
+        "https://remote-instance.com", json={"ok": 1}, auth=auth
+    )
 
     assert httpsig.verify_request(
         resp.request.method,

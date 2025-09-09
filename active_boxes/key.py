@@ -25,7 +25,9 @@ class Key(object):
     def load(self, privkey_pem: str) -> None:
         self.privkey_pem = privkey_pem
         self.privkey = RSA.importKey(self.privkey_pem)
-        self.pubkey_pem = self.privkey.publickey().exportKey("PEM").decode("utf-8")
+        self.pubkey_pem = (
+            self.privkey.publickey().exportKey("PEM").decode("utf-8")
+        )
 
     def new(self) -> None:
         k = RSA.generate(self.DEFAULT_KEY_SIZE)

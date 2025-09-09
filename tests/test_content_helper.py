@@ -29,7 +29,8 @@ def test_little_content_helper_linkify():
 
 
 @mock.patch(
-    "active_boxes.content_helper.get_actor_url", return_value="https://microblog.pub"
+    "active_boxes.content_helper.get_actor_url",
+    return_value="https://microblog.pub",
 )
 def test_little_content_helper_mention(_):
     back = InMemBackend()
@@ -54,7 +55,8 @@ def test_little_content_helper_mention(_):
 
 
 @mock.patch(
-    "active_boxes.content_helper.get_actor_url", return_value="https://microblog.pub"
+    "active_boxes.content_helper.get_actor_url",
+    return_value="https://microblog.pub",
 )
 def test_little_content_helper_tag(_):
     back = InMemBackend()

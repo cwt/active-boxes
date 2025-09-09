@@ -47,7 +47,9 @@ class InMemBackend(Backend):
                     f"expected method {name} to be called at step #{i}, but got {calls[i][0]}"
                 )
             if len(funcs) < len(calls[i][1]) - 1:
-                raise ValueError(f"args left unchecked for method {name} at step #{i}")
+                raise ValueError(
+                    f"args left unchecked for method {name} at step #{i}"
+                )
             for z, f in enumerate(funcs):
                 if len(calls[i][1]) < z + 2:  # XXX(tsileo): 0 will be self
                     raise ValueError(f"method {name} has no args at index {z}")
@@ -151,7 +153,9 @@ class InMemBackend(Backend):
         return f"https://todo/note/{obj_id}"
 
     @track_call
-    def outbox_new(self, as_actor: ap.Person, activity: ap.BaseActivity) -> None:
+    def outbox_new(
+        self, as_actor: ap.Person, activity: ap.BaseActivity
+    ) -> None:
         print(f"saving {activity!r} to DB")
         actor_id = activity.get_actor().id
         if activity.id in self.OUTBOX_IDX[actor_id]:
@@ -160,7 +164,9 @@ class InMemBackend(Backend):
         self.OUTBOX_IDX[actor_id][activity.id] = activity
         self.FETCH_MOCK[activity.id] = activity.to_dict()
         if isinstance(activity, ap.Create):
-            self.FETCH_MOCK[activity.get_object().id] = activity.get_object().to_dict()
+            self.FETCH_MOCK[activity.get_object().id] = (
+                activity.get_object().to_dict()
+            )
 
     @track_call
     def new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
@@ -176,7 +182,9 @@ class InMemBackend(Backend):
         self.FOLLOWING[as_actor.id].append(follow.get_object().id)
 
     @track_call
-    def undo_new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
+    def undo_new_following(
+        self, as_actor: ap.Person, follow: ap.Follow
+    ) -> None:
         self.FOLLOWING[as_actor.id].remove(follow.get_object().id)
 
     def followers(self, as_actor: ap.Person) -> List[str]:
@@ -212,19 +220,27 @@ class InMemBackend(Backend):
         pass
 
     @track_call
-    def inbox_announce(self, as_actor: ap.Person, activity: ap.Announce) -> None:
+    def inbox_announce(
+        self, as_actor: ap.Person, activity: ap.Announce
+    ) -> None:
         pass
 
     @track_call
-    def inbox_undo_announce(self, as_actor: ap.Person, activity: ap.Announce) -> None:
+    def inbox_undo_announce(
+        self, as_actor: ap.Person, activity: ap.Announce
+    ) -> None:
         pass
 
     @track_call
-    def outbox_announce(self, as_actor: ap.Person, activity: ap.Announce) -> None:
+    def outbox_announce(
+        self, as_actor: ap.Person, activity: ap.Announce
+    ) -> None:
         pass
 
     @track_call
-    def outbox_undo_announce(self, as_actor: ap.Person, activity: ap.Announce) -> None:
+    def outbox_undo_announce(
+        self, as_actor: ap.Person, activity: ap.Announce
+    ) -> None:
         pass
 
     @track_call

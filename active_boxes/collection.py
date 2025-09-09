@@ -1,4 +1,5 @@
 """Collection releated utils."""
+
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -48,7 +49,9 @@ def parse_collection(  # noqa: C901
                 n = payload["first"].get("next")
                 if n:
                     out.extend(
-                        parse_collection(url=n, level=level + 1, fetcher=fetcher)
+                        parse_collection(
+                            url=n, level=level + 1, fetcher=fetcher
+                        )
                     )
         return out
 
