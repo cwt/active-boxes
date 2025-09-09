@@ -717,3 +717,171 @@ def test_format_datetime_edge_cases():
     dt = datetime(2023, 1, 1, 12, 0, 0)
     with pytest.raises(ValueError, match="datetime must be tz aware"):
         ap.format_datetime(dt)
+
+
+# Additional tests from coverage files
+
+
+def test_format_datetime_edge_cases_additional():
+    """Test edge cases for format_datetime function."""
+    from datetime import datetime, timezone
+
+    # Test with timezone aware datetime with microseconds
+    dt = datetime(2023, 1, 1, 12, 0, 0, 123456, tzinfo=timezone.utc)
+    assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
+
+    # Test with timezone aware datetime in different timezone
+    from datetime import timedelta
+
+    dt = datetime(2023, 1, 1, 17, 0, 0, tzinfo=timezone(timedelta(hours=5)))
+    assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
+
+
+def test_backend_functions_edge_cases():
+    """Test edge cases for backend functions."""
+    # Test get_backend without initialization
+    ap.use_backend(None)
+    with pytest.raises(ap.Error):
+        ap.get_backend()
+
+    # Test use_backend with None
+    ap.use_backend(None)
+    with pytest.raises(ap.Error):
+        ap.get_backend()
+
+
+def test_get_backend_uninitialized():
+    """Test get_backend function when backend is not initialized."""
+    # Save current backend
+    original_backend = ap.BACKEND
+
+    # Unset backend
+    ap.use_backend(None)
+
+    # Test that get_backend raises error
+    with pytest.raises(ap.Error):
+        ap.get_backend()
+
+    # Restore backend
+    ap.use_backend(original_backend)
+
+
+def test_activity_type_validation():
+    """Test activity type validation in parse_activity."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test with unexpected activity type (should raise ValueError from enum first)
+    with pytest.raises(ValueError):
+        ap.parse_activity(
+            {"type": "UnknownType"}, expected=ap.ActivityType.NOTE
+        )
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_base_activity_init_edge_cases():
+    """Test edge cases in BaseActivity __init__ method."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test with None values in kwargs (should be filtered out)
+    activity_data = {
+        "type": "Create",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "id": "https://example.com/note/1",
+            "attributedTo": "https://example.com/person/1",
+        },
+        "summary": None,  # Should be filtered out
+    }
+    activity = ap.parse_activity(activity_data)
+    # Verify the None value was filtered out
+    assert "summary" not in activity._data
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_context_handling_core():
+    """Test context handling in BaseActivity __init__ method."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test with existing context that ends with dict
+    activity_data = {
+        "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {"custom": "http://example.com/ns#"},
+        ],
+        "type": "Create",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "id": "https://example.com/note/1",
+            "attributedTo": "https://example.com/person/1",
+        },
+    }
+    activity = ap.parse_activity(activity_data)
+    # Verify context was processed
+    assert "@context" in activity._data
+    assert isinstance(activity._data["@context"], list)
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_clean_activity_edge_cases():
+    """Test edge cases in clean_activity function."""
+    # Test with activity containing featured field
+    activity = {
+        "type": "Note",
+        "content": "Test note",
+        "featured": "https://example.com/featured",
+    }
+    cleaned = ap.clean_activity(activity)
+    assert (
+        "featured" in cleaned
+    )  # featured should not be removed by clean_activity
+
+    # Test with Create activity containing various fields to be cleaned
+    create_activity = {
+        "type": "Create",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "bto": ["https://example.com/person/1"],
+            "bcc": ["https://example.com/person/2"],
+        },
+        "bto": ["https://example.com/person/3"],
+        "bcc": ["https://example.com/person/4"],
+    }
+    cleaned = ap.clean_activity(create_activity)
+    assert "bto" not in cleaned
+    assert "bcc" not in cleaned
+    assert "bto" not in cleaned["object"]
+    assert "bcc" not in cleaned["object"]
