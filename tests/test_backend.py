@@ -20,16 +20,16 @@ def track_call(f):
 class InMemBackend(Backend):
     """In-memory backend meant to be used for the test suite."""
 
-    DB = {}
-    USERS = {}
-    FETCH_MOCK = {}
-    INBOX_IDX = {}
-    OUTBOX_IDX = {}
-    FOLLOWERS = {}
-    FOLLOWING = {}
+    DB: dict[str, dict[str, list]] = {}
+    USERS: dict[str, ap.Person] = {}
+    FETCH_MOCK: dict[str, ap.ObjectType] = {}
+    INBOX_IDX: dict[str, dict] = {}
+    OUTBOX_IDX: dict[str, dict] = {}
+    FOLLOWERS: dict[str, list] = {}
+    FOLLOWING: dict[str, list] = {}
 
     # For tests purposes only
-    _METHOD_CALLS = {}
+    _METHOD_CALLS: dict[str, list] = {}
 
     def called_methods(self, p: ap.Person) -> List[str]:
         data = list(self._METHOD_CALLS[p.id])
@@ -72,7 +72,7 @@ class InMemBackend(Backend):
 
     def setup_actor(self, name, pusername):
         """Create a new actor in this backend."""
-        p = ap.Person(
+        if p := ap.Person(
             name=name,
             preferredUsername=pusername,
             summary="Hello",
@@ -80,36 +80,37 @@ class InMemBackend(Backend):
             inbox=f"https://lol.com/{pusername}/inbox",
             followers=f"https://lol.com/{pusername}/followers",
             following=f"https://lol.com/{pusername}/following",
-        )
+        ):
+            self.USERS[p.preferredUsername] = p
+            self.DB[p.id] = {"inbox": [], "outbox": []}
+            self.INBOX_IDX[p.id] = {}
+            self.OUTBOX_IDX[p.id] = {}
+            self.FOLLOWERS[p.id] = []
+            self.FOLLOWING[p.id] = []
+            self.FETCH_MOCK[p.id] = p.to_dict()
+            self._METHOD_CALLS[p.id] = []
+            return p
 
-        self.USERS[p.preferredUsername] = p
-        self.DB[p.id] = {"inbox": [], "outbox": []}
-        self.INBOX_IDX[p.id] = {}
-        self.OUTBOX_IDX[p.id] = {}
-        self.FOLLOWERS[p.id] = []
-        self.FOLLOWING[p.id] = []
-        self.FETCH_MOCK[p.id] = p.to_dict()
-        self._METHOD_CALLS[p.id] = []
-        return p
-
-    def fetch_iri(self, iri: str) -> ap.ObjectType:
-        if iri.endswith("/followers"):
-            data = self.FOLLOWERS[iri.replace("/followers", "")]
-            return {
-                "id": iri,
-                "type": ap.ActivityType.ORDERED_COLLECTION.value,
-                "totalItems": len(data),
-                "orderedItems": data,
-            }
-        if iri.endswith("/following"):
-            data = self.FOLLOWING[iri.replace("/following", "")]
-            return {
-                "id": iri,
-                "type": ap.ActivityType.ORDERED_COLLECTION.value,
-                "totalItems": len(data),
-                "orderedItems": data,
-            }
-        return self.FETCH_MOCK[iri]
+    def fetch_iri(self, iri: str, **kwargs) -> ap.ObjectType:
+        match iri:
+            case iri if iri.endswith("/followers"):
+                data = self.FOLLOWERS[iri.replace("/followers", "")]
+                return {
+                    "id": iri,
+                    "type": ap.ActivityType.ORDERED_COLLECTION.value,
+                    "totalItems": len(data),
+                    "orderedItems": data,
+                }
+            case iri if iri.endswith("/following"):
+                data = self.FOLLOWING[iri.replace("/following", "")]
+                return {
+                    "id": iri,
+                    "type": ap.ActivityType.ORDERED_COLLECTION.value,
+                    "totalItems": len(data),
+                    "orderedItems": data,
+                }
+            case _:
+                return self.FETCH_MOCK[iri]
 
     def get_user(self, username: str) -> ap.Person:
         if username in self.USERS:
@@ -200,8 +201,8 @@ class InMemBackend(Backend):
         payload = json.loads(payload_encoded)
         print(f"post_to_remote_inbox {payload} {recp}")
         act = ap.parse_activity(payload)
-        as_actor = ap.parse_activity(self.fetch_iri(recp.replace("/inbox", "")))
-        act.process_from_inbox(as_actor)
+        actor = ap.parse_activity(self.fetch_iri(recp.replace("/inbox", "")))
+        act.process_from_inbox(actor)
 
     @track_call
     def inbox_like(self, as_actor: ap.Person, activity: ap.Like) -> None:

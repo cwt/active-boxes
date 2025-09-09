@@ -65,13 +65,24 @@ def _body_digest(body: str) -> str:
 
 def _get_public_key(key_id: str) -> Key:
     actor = get_backend().fetch_iri(key_id)
-    if _has_type(actor["type"], "Key"):
-        # The Key is not embedded in the Person
-        k = Key(actor["owner"], actor["id"])
-        k.load_pub(actor["publicKeyPem"])
-    else:
-        k = Key(actor["id"], actor["publicKey"]["id"])
-        k.load_pub(actor["publicKey"]["publicKeyPem"])
+    match actor:
+        case {
+            "type": actor_type,
+            "publicKeyPem": public_key_pem,
+            "owner": owner,
+            "id": actor_id,
+        } if _has_type(actor_type, "Key"):
+            # The Key is not embedded in the Person
+            k = Key(owner, actor_id)
+            k.load_pub(public_key_pem)
+        case {
+            "publicKey": {"id": public_key_id, "publicKeyPem": public_key_pem},
+            "id": actor_id,
+        }:
+            k = Key(actor_id, public_key_id)
+            k.load_pub(public_key_pem)
+        case _:
+            raise ValueError(f"unexpected actor structure: {actor!r}")
 
     # Ensure the right key was fetch
     if key_id != k.key_id():
@@ -83,8 +94,7 @@ def _get_public_key(key_id: str) -> Key:
 
 
 def verify_request(method: str, path: str, headers: Any, body: str) -> bool:
-    hsig = _parse_sig_header(headers.get("Signature"))
-    if not hsig:
+    if not (hsig := _parse_sig_header(headers.get("Signature"))):
         logger.debug("no signature in header")
         return False
     logger.debug(f"hsig={hsig}")
@@ -122,7 +132,7 @@ class HTTPSigAuth(AuthBase):
         bh.update(body)
         bodydigest = "SHA-256=" + base64.b64encode(bh.digest()).decode("utf-8")
 
-        date = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         r.headers.update({"Digest": bodydigest, "Date": date, "Host": host})
 

@@ -1151,6 +1151,45 @@ files = [
 ]
 
 [[package]]
+name = "types-markdown"
+version = "3.9.0.20250906"
+description = "Typing stubs for Markdown"
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "types_markdown-3.9.0.20250906-py3-none-any.whl", hash = "sha256:afac4297e4e75f00b4043f9b3a989dc5924230d065996a233b9bce894c438cc2"},
+    {file = "types_markdown-3.9.0.20250906.tar.gz", hash = "sha256:f02dc1a2d130b093de4910c64b2d0a811ae7020f03624df41c667818d2fee050"},
+]
+
+[[package]]
+name = "types-regex"
+version = "2025.9.1.20250903"
+description = "Typing stubs for regex"
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "types_regex-2025.9.1.20250903-py3-none-any.whl", hash = "sha256:93ce5eb3949e27fc9f329aaed47386dba6f16695650c61e55035e2d26497b8e7"},
+    {file = "types_regex-2025.9.1.20250903.tar.gz", hash = "sha256:230116f64b5c08b06109d950086e55fc809b8a2a5d13e80218ac7cf34f9aac84"},
+]
+
+[[package]]
+name = "types-requests"
+version = "2.32.4.20250809"
+description = "Typing stubs for requests"
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "types_requests-2.32.4.20250809-py3-none-any.whl", hash = "sha256:f73d1832fb519ece02c85b1f09d5f0dd3108938e7d47e7f94bbfa18a6782b163"},
+    {file = "types_requests-2.32.4.20250809.tar.gz", hash = "sha256:d8060de1c8ee599311f56ff58010fb4902f462a1470802cf9f6ed27bc46c4df3"},
+]
+
+[package.dependencies]
+urllib3 = ">=2"
+
+[[package]]
 name = "typing-extensions"
 version = "4.15.0"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -1195,4 +1234,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "e2a62af911f812aa2526c20644a86a86b313f5a1702ec17c8a59c678d8a5ca7d"
+content-hash = "33ce96c20b109b42bbabd4161718d5cbd1b2dacac0d312f0a0b35e9661060ce2"

@@ -45,8 +45,7 @@ def mentionify(
     tags = []
     for mention in re.findall(MENTION_REGEX, content):
         _, username, domain = mention.split("@")
-        actor_url = get_actor_url(mention)
-        if not actor_url:
+        if not (actor_url := get_actor_url(mention)):
             # FIXME(tsileo): raise an error?
             continue
         p = get_backend().fetch_iri(actor_url)
@@ -63,9 +62,11 @@ def mentionify(
 
 def parse_markdown(content: str) -> Tuple[str, List[Dict[str, str]]]:
     tags = []
-    content, hashtag_tags = hashtagify(content)
-    tags.extend(hashtag_tags)
-    content, mention_tags = mentionify(content)
-    tags.extend(mention_tags)
+    if hashtag_tags := hashtagify(content)[1]:
+        content, hashtag_tags = hashtagify(content)
+        tags.extend(hashtag_tags)
+    if mention_tags := mentionify(content)[1]:
+        content, mention_tags = mentionify(content)
+        tags.extend(mention_tags)
     content = markdown(content, extensions=["mdx_linkify"])
     return content, tags

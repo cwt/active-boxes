@@ -1,7 +1,7 @@
 import ipaddress
 import logging
 import socket
-from typing import Dict
+from typing import Dict, Union
 from urllib.parse import urlparse
 
 from .errors import Error
@@ -33,17 +33,24 @@ def is_url_valid(url: str, debug: bool = False) -> bool:
     if parsed.hostname in ["localhost"]:
         return False
 
+    if parsed.hostname is None:
+        return False
+
     if _CACHE.get(parsed.hostname, False):
         return True
 
+    ip_address: Union[
+        str, int, ipaddress.IPv4Address, ipaddress.IPv6Address
+    ] = ""
     try:
         ip_address = ipaddress.ip_address(parsed.hostname)
     except ValueError:
         try:
-            ip_address = socket.getaddrinfo(parsed.hostname, parsed.port or 80)[
-                0
-            ][4][0]
-            logger.debug(f"dns lookup: {parsed.hostname} -> {ip_address}")
+            if socket_info := socket.getaddrinfo(
+                parsed.hostname, parsed.port or 80
+            )[0][4][0]:
+                ip_address = socket_info
+                logger.debug(f"dns lookup: {parsed.hostname} -> {ip_address}")
         except socket.gaierror:
             logger.exception(f"failed to lookup url {url}")
             _CACHE[parsed.hostname] = False
@@ -51,7 +58,14 @@ def is_url_valid(url: str, debug: bool = False) -> bool:
 
     logger.debug(f"{ip_address}")
 
-    if ipaddress.ip_address(ip_address).is_private:
+    if ip_address is None:
+        return False
+
+    # Convert to ipaddress object if it's a string
+    if isinstance(ip_address, (str, int)):
+        ip_address = ipaddress.ip_address(ip_address)
+
+    if ip_address.is_private:
         logger.info(f"rejecting private URL {url}")
         _CACHE[parsed.hostname] = False
         return False

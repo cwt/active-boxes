@@ -43,7 +43,7 @@ class Backend(abc.ABC):
 
     def fetch_json(self, url: str, **kwargs):
         self.check_url(url)
-        resp = requests.get(
+        if resp := requests.get(
             url,
             headers={
                 "User-Agent": self.user_agent(),
@@ -52,11 +52,9 @@ class Backend(abc.ABC):
             **kwargs,
             timeout=15,
             allow_redirects=True,
-        )
-
-        resp.raise_for_status()
-
-        return resp
+        ):
+            resp.raise_for_status()
+            return resp
 
     def parse_collection(
         self,
@@ -95,7 +93,7 @@ class Backend(abc.ABC):
             )
 
         try:
-            resp = requests.get(
+            if resp := requests.get(
                 iri,
                 headers={
                     "User-Agent": self.user_agent(),
@@ -104,7 +102,25 @@ class Backend(abc.ABC):
                 timeout=15,
                 allow_redirects=False,
                 **kwargs,
-            )
+            ):
+                if resp.status_code == 404:
+                    raise ActivityNotFoundError(f"{iri} is not found")
+                elif resp.status_code == 410:
+                    raise ActivityGoneError(f"{iri} is gone")
+                elif resp.status_code in [500, 502, 503]:
+                    raise ActivityUnavailableError(
+                        f"unable to fetch {iri}, server error ({resp.status_code})"
+                    )
+
+                resp.raise_for_status()
+
+                try:
+                    out = resp.json()
+                except (json.JSONDecodeError, ValueError):
+                    # TODO(tsileo): a special error type?
+                    raise NotAnActivityError(f"{iri} is not JSON")
+
+                return out
         except (
             requests.exceptions.ConnectTimeout,
             requests.exceptions.ReadTimeout,
@@ -113,24 +129,7 @@ class Backend(abc.ABC):
             raise ActivityUnavailableError(
                 f"unable to fetch {iri}, connection error"
             )
-        if resp.status_code == 404:
-            raise ActivityNotFoundError(f"{iri} is not found")
-        elif resp.status_code == 410:
-            raise ActivityGoneError(f"{iri} is gone")
-        elif resp.status_code in [500, 502, 503]:
-            raise ActivityUnavailableError(
-                f"unable to fetch {iri}, server error ({resp.status_code})"
-            )
-
-        resp.raise_for_status()
-
-        try:
-            out = resp.json()
-        except (json.JSONDecodeError, ValueError):
-            # TODO(tsileo): a special error type?
-            raise NotAnActivityError(f"{iri} is not JSON")
-
-        return out
+        raise ActivityUnavailableError(f"unable to fetch {iri}, unknown error")
 
     @abc.abstractmethod
     def activity_url(self, obj_id: str) -> str:

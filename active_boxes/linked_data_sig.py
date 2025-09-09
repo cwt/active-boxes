@@ -2,12 +2,13 @@ import base64
 import hashlib
 import typing
 from datetime import datetime
+from datetime import timezone
 from typing import Any
 from typing import Dict
 
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
-from pyld import jsonld
+from pyld import jsonld  # type: ignore[import-untyped]
 
 if typing.TYPE_CHECKING:
     from .key import Key  # noqa: type checking
@@ -36,27 +37,29 @@ def _options_hash(doc):
         if k in doc:
             del doc[k]
     doc["@context"] = "https://w3id.org/identity/v1"
-    normalized = jsonld.normalize(
+    if normalized := jsonld.normalize(
         doc, {"algorithm": "URDNA2015", "format": "application/nquads"}
-    )
-    h = hashlib.new("sha256")
-    h.update(normalized.encode("utf-8"))
-    return h.hexdigest()
+    ):
+        h = hashlib.new("sha256")
+        h.update(normalized.encode("utf-8"))
+        return h.hexdigest()
+    return ""
 
 
 def _doc_hash(doc):
     doc = dict(doc)
     if "signature" in doc:
         del doc["signature"]
-    normalized = jsonld.normalize(
+    if normalized := jsonld.normalize(
         doc, {"algorithm": "URDNA2015", "format": "application/nquads"}
-    )
-    h = hashlib.new("sha256")
-    h.update(normalized.encode("utf-8"))
-    return h.hexdigest()
+    ):
+        h = hashlib.new("sha256")
+        h.update(normalized.encode("utf-8"))
+        return h.hexdigest()
+    return ""
 
 
-def verify_signature(doc, key: "Key"):
+def verify_signature(doc: Dict[str, Any], key: "Key") -> bool:
     to_be_signed = _options_hash(doc) + _doc_hash(doc)
     signature = doc["signature"]["signatureValue"]
     signer = PKCS1_v1_5.new(key.pubkey or key.privkey)  # type: ignore
@@ -65,11 +68,12 @@ def verify_signature(doc, key: "Key"):
     return signer.verify(digest, base64.b64decode(signature))  # type: ignore
 
 
-def generate_signature(doc, key: "Key"):
+def generate_signature(doc: Dict[str, Any], key: "Key") -> None:
     options = {
         "type": "RsaSignature2017",
         "creator": doc["actor"] + "#main-key",
-        "created": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "created": datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        + "Z",
     }
     doc["signature"] = options
     to_be_signed = _options_hash(doc) + _doc_hash(doc)

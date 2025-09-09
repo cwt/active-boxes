@@ -4,7 +4,7 @@ from unittest import mock
 
 from active_boxes import linked_data_sig
 from active_boxes.key import Key
-from pyld import jsonld
+from pyld import jsonld  # type: ignore[import-untyped]
 
 logging.basicConfig(level=logging.DEBUG)
 

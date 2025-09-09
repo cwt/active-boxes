@@ -24,8 +24,8 @@ class ServerError(Error):
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        payload: Optional[Dict[str, Any]] = None,
+        status_code: int | None = None,
+        payload: Dict[str, Any] | None = None,
     ) -> None:
         Exception.__init__(self)
         self.message = message

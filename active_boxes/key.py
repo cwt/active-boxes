@@ -10,7 +10,7 @@ from Crypto.Util import number
 class Key(object):
     DEFAULT_KEY_SIZE = 2048
 
-    def __init__(self, owner: str, id_: Optional[str] = None) -> None:
+    def __init__(self, owner: str, id_: str | None = None) -> None:
         self.owner = owner
         self.privkey_pem: Optional[str] = None
         self.pubkey_pem: Optional[str] = None
@@ -49,8 +49,8 @@ class Key(object):
     @classmethod
     def from_dict(cls, data):
         try:
-            k = cls(data["owner"], data["id"])
-            k.load_pub(data["publicKeyPem"])
+            if k := cls(data["owner"], data["id"]):
+                k.load_pub(data["publicKeyPem"])
         except KeyError:
             raise ValueError(f"bad key data {data!r}")
         return k

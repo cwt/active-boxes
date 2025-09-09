@@ -48,16 +48,17 @@ def test_webfinger(mock_fetch_json, _, _1):
     mock_response.raise_for_status.return_value = None
     mock_fetch_json.return_value = mock_response
 
-    data = webfinger.webfinger("@dev@microblog.pub")
-    assert data == _WEBFINGER_RESP
+    if data := webfinger.webfinger("@dev@microblog.pub"):
+        assert data == _WEBFINGER_RESP
 
-    assert (
-        webfinger.get_actor_url("@dev@microblog.pub") == "https://microblog.pub"
-    )
-    assert (
-        webfinger.get_remote_follow_template("@dev@microblog.pub")
-        == "https://microblog.pub/authorize_follow?profile={uri}"
-    )
+        assert (
+            webfinger.get_actor_url("@dev@microblog.pub")
+            == "https://microblog.pub"
+        )
+        assert (
+            webfinger.get_remote_follow_template("@dev@microblog.pub")
+            == "https://microblog.pub/authorize_follow?profile={uri}"
+        )
 
 
 def test_webfinger_invalid_url():

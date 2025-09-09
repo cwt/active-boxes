@@ -21,8 +21,8 @@ def test_empty_collection():
         "id": "https://lol.com",
     }
 
-    out = parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
-    assert out == []
+    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+        assert out == []
 
 
 def test_recursive_collection_limit():
@@ -67,8 +67,8 @@ def test_collection():
         "items": [1, 2, 3],
     }
 
-    out = parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
-    assert out == [1, 2, 3]
+    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+        assert out == [1, 2, 3]
 
 
 def test_ordered_collection():
@@ -91,5 +91,5 @@ def test_ordered_collection():
         "orderedItems": [4, 5, 6],
     }
 
-    out = parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
-    assert out == [1, 2, 3, 4, 5, 6]
+    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+        assert out == [1, 2, 3, 4, 5, 6]

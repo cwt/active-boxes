@@ -48,16 +48,15 @@ def test_httpsig():
             "active_boxes.httpsig.verify_request", return_value=True
         ):
             auth = httpsig.HTTPSigAuth(k)
-            resp = requests.post(
+            if resp := requests.post(
                 "https://remote-instance.com", json={"ok": 1}, auth=auth
-            )
-
-            assert httpsig.verify_request(
-                resp.request.method,
-                resp.request.path_url,
-                resp.request.headers,
-                resp.request.body,
-            )
+            ):
+                assert httpsig.verify_request(
+                    resp.request.method,
+                    resp.request.path_url,
+                    resp.request.headers,
+                    resp.request.body,
+                )
 
 
 def test_httpsig_key():
@@ -92,13 +91,12 @@ def test_httpsig_key():
             "active_boxes.httpsig.verify_request", return_value=True
         ):
             auth = httpsig.HTTPSigAuth(k)
-            resp = requests.post(
+            if resp := requests.post(
                 "https://remote-instance.com", json={"ok": 1}, auth=auth
-            )
-
-            assert httpsig.verify_request(
-                resp.request.method,
-                resp.request.path_url,
-                resp.request.headers,
-                resp.request.body,
-            )
+            ):
+                assert httpsig.verify_request(
+                    resp.request.method,
+                    resp.request.path_url,
+                    resp.request.headers,
+                    resp.request.body,
+                )

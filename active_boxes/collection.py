@@ -11,10 +11,10 @@ from .errors import UnexpectedActivityTypeError
 
 
 def parse_collection(  # noqa: C901
-    payload: Optional[Dict[str, Any]] = None,
-    url: Optional[str] = None,
+    payload: Dict[str, Any] | None = None,
+    url: str | None = None,
     level: int = 0,
-    fetcher: Optional[Callable[[str], Dict[str, Any]]] = None,
+    fetcher: Callable[[str], Dict[str, Any]] | None = None,
 ) -> List[Any]:
     """Resolve/fetch a `Collection`/`OrderedCollection`."""
     if not fetcher:
@@ -46,8 +46,7 @@ def parse_collection(  # noqa: C901
                     out.extend(payload["first"]["orderedItems"])
                 if "items" in payload["first"]:
                     out.extend(payload["first"]["items"])
-                n = payload["first"].get("next")
-                if n:
+                if n := payload["first"].get("next"):
                     out.extend(
                         parse_collection(
                             url=n, level=level + 1, fetcher=fetcher
@@ -61,8 +60,7 @@ def parse_collection(  # noqa: C901
                 out.extend(payload["orderedItems"])
             if "items" in payload:
                 out.extend(payload["items"])
-            n = payload.get("next")
-            if n is None:
+            if (n := payload.get("next")) is None:
                 break
             payload = fetcher(n)
         else:

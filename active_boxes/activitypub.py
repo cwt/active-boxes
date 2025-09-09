@@ -9,6 +9,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Sequence
 from typing import Type
 from typing import Union
 
@@ -29,7 +30,7 @@ UninitializedBackendError = Error("a backend must be initialized")
 # Helper/shortcut for typing
 ObjectType = Dict[str, Any]
 ActorType = Union["Person", "Application", "Group", "Organization", "Service"]
-ObjectOrIDType = Union[str, ObjectType]
+ObjectOrIDType = str | ObjectType
 
 CTX_AS = "https://www.w3.org/ns/activitystreams"
 CTX_SECURITY = "https://w3id.org/security/v1"
@@ -155,29 +156,34 @@ COLLECTION_TYPES = [ActivityType.COLLECTION, ActivityType.ORDERED_COLLECTION]
 
 
 def parse_activity(
-    payload: ObjectType, expected: Optional[ActivityType] = None
+    payload: ObjectType, expected: ActivityType | None = None
 ) -> "BaseActivity":
-    if "type" not in payload:
-        raise BadActivityError(f"the payload has no type: {payload!r}")
+    match payload:
+        case {"type": activity_type}:
+            t = ActivityType(_to_list(activity_type)[0])
+        case _:
+            raise BadActivityError(f"the payload has no type: {payload!r}")
 
-    t = ActivityType(_to_list(payload["type"])[0])
+    match expected, t:
+        case expected_type, activity_type if (
+            expected_type and activity_type != expected_type
+        ):
+            raise UnexpectedActivityTypeError(
+                f'expected a {expected_type.name} activity, got a {payload["type"]}: {payload}'
+            )
+        case _:
+            pass
 
-    if expected and t != expected:
-        raise UnexpectedActivityTypeError(
-            f'expected a {expected.name} activity, got a {payload["type"]}: {payload}'
-        )
-
-    if t not in _ACTIVITY_CLS:
-        raise BadActivityError(
-            f'unsupported activity type {payload["type"]}: {payload}'
-        )
-
-    activity = _ACTIVITY_CLS[t](**payload)
-
-    return activity
+    match t:
+        case activity_type if activity_type in _ACTIVITY_CLS:
+            return _ACTIVITY_CLS[activity_type](**payload)
+        case _:
+            raise BadActivityError(
+                f'unsupported activity type {payload["type"]}: {payload}'
+            )
 
 
-def _to_list(data: Union[List[Any], Any]) -> List[Any]:
+def _to_list(data: List[Any] | Any) -> List[Any]:
     """Helper to convert fields that can be either an object or a list of objects to a
     list of object."""
     if isinstance(data, list):
@@ -218,10 +224,15 @@ def _get_id(obj) -> Optional[str]:
         raise ValueError(f"unexpected object: {obj!r}")
 
 
+from typing import Sequence
+
+# ... (other imports)
+
+
 def _has_type(
-    obj_type: Union[str, List[str]],
-    _types: Union[ActivityType, str, List[Union[ActivityType, str]]],
-):
+    obj_type: str | Sequence[str],
+    _types: ActivityType | str | Sequence[ActivityType | str],
+) -> bool:
     """Returns `True` if one of `obj_type` equals one of `_types`."""
     types_str = [
         _type.value if isinstance(_type, ActivityType) else _type
@@ -283,7 +294,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         self.__ctx: Any = {}
 
         self.__obj: Optional["BaseActivity"] = None
-        self.__actor: Optional[List[ActorType]] = None
+        self.__actor: List[ActorType] = []
 
         # The id may not be present for new activities
         if "id" in kwargs:
@@ -303,29 +314,30 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         if self.OBJECT_REQUIRED and "object" in kwargs:
             obj = kwargs.pop("object")
-            if isinstance(obj, str):
-                # The object is a just a reference the its ID/IRI
-                # FIXME(tsileo): fetch the ref
-                self._data["object"] = obj
-            elif isinstance(obj, dict):
-                if not self.ALLOWED_OBJECT_TYPES:
+            match obj:
+                case str():
+                    # The object is a just a reference the its ID/IRI
+                    # FIXME(tsileo): fetch the ref
+                    self._data["object"] = obj
+                case {"type": obj_type, **rest} if self.ALLOWED_OBJECT_TYPES:
+                    if (
+                        self.ACTIVITY_TYPE != ActivityType.CREATE
+                        and "id" not in obj
+                    ):
+                        raise BadActivityError("invalid object, missing type")
+                    if not _has_type(obj_type, self.ALLOWED_OBJECT_TYPES):
+                        raise UnexpectedActivityTypeError(
+                            f"unexpected object type {obj_type} (allowed={self.ALLOWED_OBJECT_TYPES!r})"
+                        )
+                    self._data["object"] = obj
+                case {"type": _, **rest} if not self.ALLOWED_OBJECT_TYPES:
                     raise UnexpectedActivityTypeError("unexpected object")
-                if "type" not in obj or (
-                    self.ACTIVITY_TYPE != ActivityType.CREATE
-                    and "id" not in obj
-                ):
+                case dict():
                     raise BadActivityError("invalid object, missing type")
-                if not _has_type(  # type: ignore  # XXX too complicated
-                    obj["type"], self.ALLOWED_OBJECT_TYPES
-                ):
-                    raise UnexpectedActivityTypeError(
-                        f'unexpected object type {obj["type"]} (allowed={self.ALLOWED_OBJECT_TYPES!r})'
+                case _:
+                    raise BadActivityError(
+                        f"invalid object type ({type(obj).__qualname__}): {obj!r}"
                     )
-                self._data["object"] = obj
-            else:
-                raise BadActivityError(
-                    f"invalid object type ({type(obj).__qualname__}): {obj!r}"
-                )
 
         if "@context" not in kwargs:
             self._data["@context"] = CTX_AS
@@ -550,7 +562,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
             else:
                 raise BadActivityError(f"failed to fetch actor: {self._data!r}")
 
-        self.__actor: List[ActorType] = []
+        self.__actor = []
         for item in _to_list(actor):
             if not isinstance(item, (str, dict)):
                 raise BadActivityError(f"invalid actor: {self._data!r}")
