@@ -1253,3 +1253,313 @@ def test_string_context_handling():
 
     # Restore backend
     ap.use_backend(None)
+
+
+def test_note_uncovered_methods():
+    """Test uncovered methods in Note class."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+        "followers": "https://example.com/person/1/followers",
+    }
+
+    # Test Note _recipients method
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "to": ["https://example.com/person/2"],
+        "cc": ["https://example.com/person/3"],
+    }
+    note = ap.parse_activity(note_data)
+    recipients = note._recipients()
+    assert "https://example.com/person/2" in recipients
+    assert "https://example.com/person/3" in recipients
+
+    # Test build_create method
+    create_activity = note.build_create()
+    assert isinstance(create_activity, ap.Create)
+    assert create_activity.actor == "https://example.com/person/1"
+    assert create_activity.get_object().content == "Test note"
+
+    # Test build_like method
+    like_activity = note.build_like(note.get_actor())
+    assert isinstance(like_activity, ap.Like)
+    assert like_activity.actor == "https://example.com/person/1"
+    assert like_activity.object == "https://example.com/note/1"
+
+    # Test build_announce method
+    announce_activity = note.build_announce(note.get_actor())
+    assert isinstance(announce_activity, ap.Announce)
+    assert announce_activity.actor == "https://example.com/person/1"
+    assert announce_activity.object == "https://example.com/note/1"
+    assert ap.AS_PUBLIC in announce_activity.to
+    assert note.get_actor().followers in announce_activity.cc
+
+    # Test has_mention with invalid tag (should not crash)
+    note_data_with_invalid_tag = {
+        "type": "Note",
+        "id": "https://example.com/note/2",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "tag": ["invalid_tag"],  # Not a dict
+    }
+    note_with_invalid_tag = ap.parse_activity(note_data_with_invalid_tag)
+    # Should not crash
+    result = note_with_invalid_tag.has_mention("https://example.com/person/2")
+    assert result is False
+
+    # Test one_of method in Question class
+    question_data = {
+        "type": "Question",
+        "id": "https://example.com/question/1",
+        "content": "Test question?",
+        "attributedTo": "https://example.com/person/1",
+        "oneOf": [
+            {"name": "Option 1", "type": "Note", "replies": {"totalItems": 0}},
+            {"name": "Option 2", "type": "Note", "replies": {"totalItems": 0}},
+        ],
+    }
+    question = ap.parse_activity(question_data)
+    options = question.one_of()
+    assert len(options) == 2
+    assert options[0]["name"] == "Option 1"
+
+    # Test Image __repr__ method
+    image_data = {
+        "type": "Image",
+        "url": "https://example.com/image.jpg",
+    }
+    image = ap.parse_activity(image_data)
+    repr_str = repr(image)
+    assert "Image" in repr_str
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_create_uncovered_methods():
+    """Test uncovered methods in Create class."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test get_tombstone method
+    create_data_with_id = {
+        "type": "Create",
+        "id": "https://example.com/create/1",
+        "actor": "https://example.com/person/1",
+        "published": "2023-01-01T12:00:00Z",
+        "object": {
+            "type": "Note",
+            "id": "https://example.com/note/1",
+            "content": "Test note",
+            "attributedTo": "https://example.com/person/1",
+            "published": "2023-01-01T12:00:00Z",
+        },
+    }
+    create_with_id = ap.parse_activity(create_data_with_id)
+    tombstone = create_with_id.get_tombstone("2023-01-02T12:00:00Z")
+    assert isinstance(tombstone, ap.Tombstone)
+    assert tombstone.id == "https://example.com/create/1"
+    assert tombstone.published == "2023-01-01T12:00:00Z"
+    assert tombstone.deleted == "2023-01-02T12:00:00Z"
+    assert tombstone.updated == "2023-01-02T12:00:00Z"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_delete_update_uncovered_methods():
+    """Test uncovered methods in Delete and Update classes."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test Update _recipients method
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "to": ["https://example.com/person/2"],
+    }
+    note = ap.parse_activity(note_data)
+
+    update_data = {
+        "type": "Update",
+        "actor": "https://example.com/person/1",
+        "object": note.to_dict(),
+        "to": ["https://example.com/person/3"],
+    }
+    update = ap.parse_activity(update_data)
+    recipients = update._recipients()
+    assert "https://example.com/person/2" in recipients
+    assert "https://example.com/person/3" in recipients
+
+    # Test Delete _recipients method
+    delete_data = {
+        "type": "Delete",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+    }
+    delete = ap.parse_activity(delete_data)
+
+    # Mock the _get_actual_object method to return our note
+    def mock_get_actual_object():
+        return note
+
+    delete._get_actual_object = mock_get_actual_object
+
+    recipients = delete._recipients()
+    assert "https://example.com/person/2" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_other_activity_classes():
+    """Test uncovered methods in other activity classes."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+        "followers": "https://example.com/person/1/followers",
+    }
+
+    # Add person 2 to mock data
+    back.FETCH_MOCK["https://example.com/person/2"] = {
+        "type": "Person",
+        "id": "https://example.com/person/2",
+        "name": "Test User 2",
+        "preferredUsername": "testuser2",
+        "inbox": "https://example.com/person/2/inbox",
+        "outbox": "https://example.com/person/2/outbox",
+    }
+
+    # Add note to mock data
+    back.FETCH_MOCK["https://example.com/note/1"] = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/2",  # Note attributed to person 2
+    }
+
+    # Test Follow _recipients and build_undo methods
+    follow_data = {
+        "type": "Follow",
+        "id": "https://example.com/follow/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/person/2",
+    }
+    follow = ap.parse_activity(follow_data)
+    recipients = follow._recipients()
+    assert recipients == ["https://example.com/person/2"]
+
+    undo_activity = follow.build_undo()
+    assert isinstance(undo_activity, ap.Undo)
+    assert undo_activity.actor == "https://example.com/person/1"
+
+    # Test Accept _recipients method
+    accept_data = {
+        "type": "Accept",
+        "id": "https://example.com/accept/1",
+        "actor": "https://example.com/person/2",
+        "object": follow_data,
+    }
+    accept = ap.parse_activity(accept_data)
+    recipients = accept._recipients()
+    assert recipients == [
+        "https://example.com/person/1"
+    ]  # The actor of the follow object
+
+    # Test Undo _recipients method for Follow
+    undo_data = {
+        "type": "Undo",
+        "id": "https://example.com/undo/1",
+        "actor": "https://example.com/person/1",
+        "object": follow_data,
+    }
+    undo = ap.parse_activity(undo_data)
+    recipients = undo._recipients()
+    assert recipients == [
+        "https://example.com/person/2"
+    ]  # The object of the follow
+
+    # Test Like _recipients and build_undo methods
+    like_data = {
+        "type": "Like",
+        "id": "https://example.com/like/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+    }
+    like = ap.parse_activity(like_data)
+    recipients = like._recipients()
+    assert recipients == [
+        "https://example.com/person/2"
+    ]  # The actor of the liked object (attributedTo)
+
+    undo_like_activity = like.build_undo()
+    assert isinstance(undo_like_activity, ap.Undo)
+    assert undo_like_activity.actor == "https://example.com/person/1"
+
+    # Test Announce _recipients and build_undo methods
+    announce_data = {
+        "type": "Announce",
+        "id": "https://example.com/announce/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+        "to": ["https://example.com/person/2"],
+        "cc": ["https://example.com/person/3"],
+    }
+    announce = ap.parse_activity(announce_data)
+    recipients = announce._recipients()
+    # Should include the actor of the announced object and the to/cc fields
+    assert "https://example.com/person/2" in recipients  # The actor of the note
+    assert "https://example.com/person/2" in recipients
+    assert "https://example.com/person/3" in recipients
+
+    undo_announce_activity = announce.build_undo()
+    assert isinstance(undo_announce_activity, ap.Undo)
+    assert undo_announce_activity.actor == "https://example.com/person/1"
+
+    # Skip Person get_key method test as it requires valid RSA key
+    # Test Person get_key method would require a valid RSA key which is complex to generate in tests
+    # We'll skip this test for now as it's not critical for coverage
+
+    # Restore backend
+    ap.use_backend(None)

@@ -13,6 +13,8 @@ from active_boxes.errors import (
     Error,
     ActivityGoneError,
     ActivityNotFoundError,
+    NotAnActivityError,
+    ActivityUnavailableError,
 )
 
 from test_backend import InMemBackend
@@ -885,3 +887,375 @@ def test_clean_activity_edge_cases():
     assert "bcc" not in cleaned
     assert "bto" not in cleaned["object"]
     assert "bcc" not in cleaned["object"]
+
+
+def test_base_activity_uncovered_methods():
+    """Test uncovered methods and error paths in BaseActivity."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test get_url method with various url formats
+    # String URL
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": "https://example.com/note/1.html",
+    }
+    note = ap.parse_activity(note_data)
+    assert note.get_url() == "https://example.com/note/1.html"
+
+    # Dict URL with Link type
+    note_data_link = {
+        "type": "Note",
+        "id": "https://example.com/note/2",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": {
+            "type": "Link",
+            "href": "https://example.com/note/2.html",
+        },
+    }
+    note_link = ap.parse_activity(note_data_link)
+    assert note_link.get_url() == "https://example.com/note/2.html"
+
+    # List of URLs
+    note_data_list = {
+        "type": "Note",
+        "id": "https://example.com/note/3",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": [
+            {
+                "type": "Link",
+                "href": "https://example.com/note/3.txt",
+                "mimeType": "text/plain",
+            },
+            {
+                "type": "Link",
+                "href": "https://example.com/note/3.html",
+                "mimeType": "text/html",
+            },
+        ],
+    }
+    note_list = ap.parse_activity(note_data_list)
+    # Should return the HTML version (preferred)
+    assert note_list.get_url() == "https://example.com/note/3.html"
+
+    # Test get_url error cases
+    # Invalid dict URL
+    note_data_invalid_dict = {
+        "type": "Note",
+        "id": "https://example.com/note/4",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": {
+            "type": "InvalidType",
+            "href": "https://example.com/note/4.html",
+        },
+    }
+    note_invalid_dict = ap.parse_activity(note_data_invalid_dict)
+    with pytest.raises(BadActivityError):
+        note_invalid_dict.get_url()
+
+    # Invalid list URL
+    note_data_invalid_list = {
+        "type": "Note",
+        "id": "https://example.com/note/5",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": [
+            {
+                "type": "InvalidType",
+                "href": "https://example.com/note/5.html",
+            }
+        ],
+    }
+    note_invalid_list = ap.parse_activity(note_data_invalid_list)
+    with pytest.raises(BadActivityError):
+        note_invalid_list.get_url()
+
+    # Empty list URL
+    note_data_empty_list = {
+        "type": "Note",
+        "id": "https://example.com/note/6",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": [],
+    }
+    note_empty_list = ap.parse_activity(note_data_empty_list)
+    with pytest.raises(BadActivityError):
+        note_empty_list.get_url()
+
+    # Invalid URL type
+    note_data_invalid_type = {
+        "type": "Note",
+        "id": "https://example.com/note/7",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+        "url": 123,  # Invalid type
+    }
+    note_invalid_type = ap.parse_activity(note_data_invalid_type)
+    with pytest.raises(BadActivityError):
+        note_invalid_type.get_url()
+
+    # Test set_id method
+    create_data = {
+        "type": "Create",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "attributedTo": "https://example.com/person/1",
+        },
+    }
+    create = ap.parse_activity(create_data)
+    create.set_id("https://example.com/create/1", "note1")
+    assert create.id == "https://example.com/create/1"
+
+    # Test to_dict with embed_object_id_only
+    create_data_with_obj = {
+        "type": "Create",
+        "id": "https://example.com/create/2",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "id": "https://example.com/note/2",
+            "content": "Test note",
+            "attributedTo": "https://example.com/person/1",
+        },
+    }
+    create_with_obj = ap.parse_activity(create_data_with_obj)
+    dict_embedded = create_with_obj.to_dict(embed_object_id_only=True)
+    assert dict_embedded["object"] == "https://example.com/note/2"
+
+    # Test to_dict embed_object_id_only error case
+    create_data_no_obj_id = {
+        "type": "Create",
+        "id": "https://example.com/create/3",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "attributedTo": "https://example.com/person/1",
+            # Missing id
+        },
+    }
+    create_no_obj_id = ap.parse_activity(create_data_no_obj_id)
+    with pytest.raises(BadActivityError):
+        create_no_obj_id.to_dict(embed_object_id_only=True)
+
+    # Test get_object_id with dict object
+    assert create_with_obj.get_object_id() == "https://example.com/note/2"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_base_activity_context_handling():
+    """Test context handling in BaseActivity."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test context handling when @context is a list ending with dict
+    activity_data = {
+        "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {
+                "custom": "http://example.com/ns#",
+            },
+        ],
+        "type": "Create",
+        "actor": "https://example.com/person/1",
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "id": "https://example.com/note/1",
+            "attributedTo": "https://example.com/person/1",
+        },
+    }
+    activity = ap.parse_activity(activity_data)
+    # Verify context was properly handled
+    assert "https://www.w3.org/ns/activitystreams" in activity._data["@context"]
+    assert isinstance(activity._data["@context"][-1], dict)
+    assert "Hashtag" in activity._data["@context"][-1]
+    assert "sensitive" in activity._data["@context"][-1]
+    assert "toot" in activity._data["@context"][-1]
+    assert "featured" in activity._data["@context"][-1]
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_base_activity_object_validation_errors():
+    """Test object validation error paths in BaseActivity."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test Update with object missing id when not CREATE type
+    with pytest.raises(BadActivityError, match="invalid object, missing type"):
+        ap.Update(
+            type="Update",
+            actor="https://example.com/person/1",
+            object={
+                "type": "Note",
+                "content": "Test note",
+                # Missing id
+            },
+        )
+
+    # Test Like with unexpected object type
+    with pytest.raises(
+        UnexpectedActivityTypeError, match="unexpected object type"
+    ):
+        ap.Like(
+            type="Like",
+            actor="https://example.com/person/1",
+            object={
+                "type": "Person",  # Not allowed for Like
+                "id": "https://example.com/person/2",
+            },
+        )
+
+    # Test Like with object missing type
+    with pytest.raises(BadActivityError, match="invalid object, missing type"):
+        ap.Like(
+            type="Like",
+            actor="https://example.com/person/1",
+            object={},  # Missing type
+        )
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_base_activity_recipients_exceptions():
+    """Test recipients method exception handling in BaseActivity."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Mock backend to raise exceptions
+    class MockBackend(InMemBackend):
+        def fetch_iri(self, iri):
+            if iri == "https://example.com/gone":
+                raise ActivityGoneError("Gone")
+            elif iri == "https://example.com/notfound":
+                raise ActivityNotFoundError("Not Found")
+            elif iri == "https://example.com/notactivity":
+                raise NotAnActivityError("Not an activity")
+            elif iri == "https://example.com/unavailable":
+                raise ActivityUnavailableError("Unavailable")
+            return super().fetch_iri(iri)
+
+    mock_back = MockBackend()
+    ap.use_backend(mock_back)
+
+    # Add required mock data
+    mock_back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Mock the extra_inboxes method to avoid key errors
+    mock_back.extra_inboxes = lambda: []
+
+    # Test with recipients that raise exceptions
+    activity_data = {
+        "type": "Create",
+        "actor": "https://example.com/person/1",
+        "to": [
+            "https://example.com/gone",
+            "https://example.com/notfound",
+            "https://example.com/notactivity",
+            "https://example.com/unavailable",
+        ],
+        "object": {
+            "type": "Note",
+            "content": "Test note",
+            "id": "https://example.com/note/1",
+            "attributedTo": "https://example.com/person/1",
+        },
+    }
+    activity = ap.parse_activity(activity_data)
+    # Should not crash, exceptions should be handled
+    recipients = activity.recipients()
+    # Just verify it doesn't crash
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_base_activity_metaclass_error():
+    """Test _ActivityMeta metaclass error handling."""
+
+    # Test creating a class without ACTIVITY_TYPE (should raise ValueError)
+    with pytest.raises(ValueError, match="class .* has no ACTIVITY_TYPE"):
+
+        class TestActivity(ap.BaseActivity):
+            pass
+
+    # Test BaseActivity with no ACTIVITY_TYPE (should raise Error)
+    with pytest.raises(Error, match="should never happen"):
+        ap.BaseActivity()
+
+
+def test_parse_activity_errors_additional():
+    """Test parse_activity error paths."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test with unexpected activity type
+    with pytest.raises(UnexpectedActivityTypeError):
+        ap.parse_activity({"type": "Note"}, expected=ap.ActivityType.CREATE)
+
+    # Test with unsupported activity type (will raise ValueError from enum first)
+    with pytest.raises(ValueError):
+        ap.parse_activity({"type": "UnsupportedType"})
+
+    # Restore backend
+    ap.use_backend(None)
