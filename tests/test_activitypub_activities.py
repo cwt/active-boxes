@@ -1178,9 +1178,9 @@ def test_get_actor_edge_cases():
 
     # Test with invalid item in actor list
     class MockActivity(ap.Create):
-        def _validate_actor(self, actor):
+        def _validate_actor(self, obj):
             # Override to bypass normal validation and test error path
-            return actor
+            return obj
 
     # We can't easily test this path without modifying the class
     # Let's just verify the existing functionality works
