@@ -2,6 +2,7 @@
 
 import logging
 
+import pytest
 from active_boxes import activitypub as ap
 from active_boxes.errors import (
     ActivityGoneError,
@@ -169,6 +170,23 @@ def test_relationship_object():
     assert relationship.relationship == "friend"
     assert relationship.object == "https://example.com/person/2"
     assert relationship.attributedTo == "https://example.com/person/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_invalid_target():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test invalid target for Add activity
+    with pytest.raises(ap.BadActivityError):
+        ap.Add(
+            type="Add",
+            actor="https://example.com/person/1",
+            object="https://example.com/note/1",
+            target=123,  # Invalid target
+        )
 
     # Restore backend
     ap.use_backend(None)

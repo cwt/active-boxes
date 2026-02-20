@@ -6,7 +6,7 @@ Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework 
 ## Modernization Goals
 1. **Python Version**: Update to Python 3.10+ to leverage modern language features
 2. **Code Modernization**: Refactor codebase to use Python 3.10+ features and modern coding practices
-3. **Testing**: Create comprehensive test suite with >90% coverage
+3. **Testing**: Create comprehensive test suite with ~89% coverage
 4. **Protocol Compliance**: Ensure full ActivityPub protocol compliance
 5. **Documentation**: Update documentation and create usage examples
 
@@ -61,7 +61,7 @@ Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework 
 
 - Full Python 3.10+ compatibility
 - 100% type hinting coverage
-- >90% test coverage
+- ~89% test coverage
 - ActivityPub protocol compliance
 - Modern, maintainable codebase
 - Comprehensive documentation

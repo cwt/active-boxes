@@ -5,7 +5,7 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 
 ## Goals - ✅ COMPLETED
 1. Modernize codebase to leverage Python 3.10+ features - ✅ COMPLETED
-2. Create comprehensive test suite with >90% coverage - ✅ COMPLETED
+2. Create comprehensive test suite with ~89% coverage - ✅ COMPLETED
 3. Ensure full ActivityPub protocol compliance - ✅ COMPLETED
 4. Update documentation and examples - ✅ COMPLETED
 5. Prepare for stable release - ✅ COMPLETED
@@ -78,7 +78,7 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 - Content processing
 
 ### Deliverables - ✅ COMPLETED
-- Comprehensive test suite with >90% coverage
+- Comprehensive test suite with ~89% coverage
 - Integration tests for protocol compliance
 - Property-based tests for robustness
 - Performance benchmarks
@@ -143,7 +143,7 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 
 1. Full Python 3.10+ compatibility - ✅ ACHIEVED
 2. 100% type hinting coverage - ✅ ACHIEVED
-3. Comprehensive test suite with >90% coverage - ✅ ACHIEVED
+3. Comprehensive test suite with ~89% coverage - ✅ ACHIEVED
 4. ActivityPub protocol compliance with latest specification - ✅ ACHIEVED
 5. Modern, readable, maintainable codebase - ✅ ACHIEVED
 6. Proper documentation and usage examples - ✅ ACHIEVED

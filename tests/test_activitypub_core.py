@@ -51,6 +51,10 @@ def test_backend_functions():
     ap.use_backend(back)
     assert ap.get_backend() == back
 
+    # Test backend methods
+    assert back.debug_mode()  # InMemBackend returns True
+    assert "Active Boxes" in back.user_agent()
+
     # Test use_backend with None
     ap.use_backend(None)
     with pytest.raises(ap.Error):
@@ -88,6 +92,14 @@ def test_parse_activity_errors():
     # Test with unknown activity type
     with pytest.raises(ValueError):
         ap.parse_activity({"type": "UnknownType"})
+
+    # Test with wrong expected type
+    with pytest.raises(ap.UnexpectedActivityTypeError):
+        ap.parse_activity({"type": "Note"}, expected=ap.ActivityType.CREATE)
+
+    # Test with wrong type in activity creation
+    with pytest.raises(ap.UnexpectedActivityTypeError):
+        ap.Note(type="Article")
 
     # Restore backend
     ap.use_backend(None)
@@ -280,6 +292,18 @@ def test_get_backend_without_initialization():
     # Test get_backend raises error
     with pytest.raises(Error):
         ap.get_backend()
+
+
+def test_ensure_backend_error():
+    """Test that _ensure_backend raises UninitializedBackendError."""
+    original_backend = ap.BACKEND
+    ap.BACKEND = None  # Temporarily unset
+    try:
+        activity = ap.Note(id="test", content="test", attributedTo="test")
+        with pytest.raises(ap.Error):
+            activity.get_object()  # This calls _ensure_backend
+    finally:
+        ap.BACKEND = original_backend  # Reset
 
 
 def test_format_datetime_exceptions():
