@@ -61,6 +61,58 @@ def test_note_activity():
     ap.use_backend(None)
 
 
+def test_profile_object():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test creating a Profile object
+    profile_data = {
+        "type": "Profile",
+        "id": "https://example.com/profile/1",
+        "name": "Test Profile",
+        "summary": "A test profile",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    profile = ap.parse_activity(profile_data)
+    assert isinstance(profile, ap.Profile)
+    assert profile.id == "https://example.com/profile/1"
+    assert profile.name == "Test Profile"
+    assert profile.summary == "A test profile"
+    assert profile.attributedTo == "https://example.com/person/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_event_object():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test creating an Event object
+    event_data = {
+        "type": "Event",
+        "id": "https://example.com/event/1",
+        "name": "Test Event",
+        "startTime": "2023-12-25T10:00:00Z",
+        "endTime": "2023-12-25T12:00:00Z",
+        "location": "Test Location",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    event = ap.parse_activity(event_data)
+    assert isinstance(event, ap.Event)
+    assert event.id == "https://example.com/event/1"
+    assert event.name == "Test Event"
+    assert event.startTime == "2023-12-25T10:00:00Z"
+    assert event.endTime == "2023-12-25T12:00:00Z"
+    assert event.location == "Test Location"
+    assert event.attributedTo == "https://example.com/person/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
 def test_create_activity():
     back = InMemBackend()
     ap.use_backend(back)

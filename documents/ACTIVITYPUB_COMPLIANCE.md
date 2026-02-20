@@ -52,9 +52,9 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
   - Audio - ✅ COMPLETED
   - Document - ✅ COMPLETED
   - Page - ✅ COMPLETED
-  - Event - ❌ NOT IMPLEMENTED
+  - Event - ✅ COMPLETED
   - Place - ❌ NOT IMPLEMENTED
-  - Profile - ❌ NOT IMPLEMENTED
+  - Profile - ✅ COMPLETED
   - Relationship - ❌ NOT IMPLEMENTED
   - Tombstone - ✅ COMPLETED
 
@@ -231,7 +231,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 ### Object Requirements - ✅ COMPLETED
 - [x] All required actor types - ✅ COMPLETED
 - [x] All required activity types - Mostly Implemented
-- [x] All required object types - Partially Implemented
+- [x] All required object types - Mostly Implemented
 - [x] Required properties validation - ✅ COMPLETED
 - [x] Collection support - ✅ COMPLETED
 

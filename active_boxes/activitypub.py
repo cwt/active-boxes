@@ -141,6 +141,9 @@ class ActivityType(Enum):
     # Misskey uses standalone Key object
     KEY = "Key"
 
+    PROFILE = "Profile"
+    EVENT = "Event"
+
 
 ACTOR_TYPES = [
     ActivityType.PERSON,
@@ -950,6 +953,18 @@ class Create(BaseActivity):
 
 class Tombstone(BaseActivity):
     ACTIVITY_TYPE = ActivityType.TOMBSTONE
+    ACTOR_REQUIRED = False
+    OBJECT_REQUIRED = False
+
+
+class Profile(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.PROFILE
+    ACTOR_REQUIRED = False  # Profiles can be standalone
+    OBJECT_REQUIRED = False
+
+
+class Event(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.EVENT
     ACTOR_REQUIRED = False
     OBJECT_REQUIRED = False
 

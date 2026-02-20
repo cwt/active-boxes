@@ -17,7 +17,7 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 - [x] Created comprehensive modernization plans
 - [x] Modernized codebase to leverage Python 3.10+ features
 - [x] Created comprehensive test suite
-- [x] Ensured mostly ActivityPub protocol compliance (high-priority features implemented)
+- [x] Ensured mostly ActivityPub protocol compliance (high and medium-priority features implemented)
 - [x] Updated documentation and examples
 - [x] Prepared for stable release
 
