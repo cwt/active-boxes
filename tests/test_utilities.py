@@ -198,7 +198,7 @@ def test_create_is_public_method():
     }
     private_create = ap.parse_activity(private_create_data)
     assert isinstance(private_create, ap.Create)
-    assert private_create.is_public() == False
+    assert not private_create.is_public()
 
     # Test public activity (to field)
     public_create_data_to = {
@@ -215,7 +215,7 @@ def test_create_is_public_method():
     }
     public_create_to = ap.parse_activity(public_create_data_to)
     assert isinstance(public_create_to, ap.Create)
-    assert public_create_to.is_public() == True
+    assert public_create_to.is_public()
 
     # Test public activity (cc field)
     public_create_data_cc = {
@@ -232,7 +232,7 @@ def test_create_is_public_method():
     }
     public_create_cc = ap.parse_activity(public_create_data_cc)
     assert isinstance(public_create_cc, ap.Create)
-    assert public_create_cc.is_public() == True
+    assert public_create_cc.is_public()
 
     # Test public activity (bto field)
     public_create_data_bto = {
@@ -249,7 +249,7 @@ def test_create_is_public_method():
     }
     public_create_bto = ap.parse_activity(public_create_data_bto)
     assert isinstance(public_create_bto, ap.Create)
-    assert public_create_bto.is_public() == True
+    assert public_create_bto.is_public()
 
     # Test public activity (bcc field)
     public_create_data_bcc = {
@@ -266,7 +266,7 @@ def test_create_is_public_method():
     }
     public_create_bcc = ap.parse_activity(public_create_data_bcc)
     assert isinstance(public_create_bcc, ap.Create)
-    assert public_create_bcc.is_public() == True
+    assert public_create_bcc.is_public()
 
     # Restore backend
     ap.use_backend(None)
@@ -325,23 +325,23 @@ def test_has_type_helper_function():
     """Test the _has_type helper function."""
     # Test with matching string
     result = ap._has_type("Note", ap.ActivityType.NOTE)
-    assert result == True
+    assert result
 
     # Test with non-matching string
     result = ap._has_type("Note", ap.ActivityType.CREATE)
-    assert result == False
+    assert not result
 
     # Test with list containing match
     result = ap._has_type(["Note", "Article"], ap.ActivityType.NOTE)
-    assert result == True
+    assert result
 
     # Test with list containing no match
     result = ap._has_type(["Note", "Article"], ap.ActivityType.CREATE)
-    assert result == False
+    assert not result
 
     # Test with empty lists
     result = ap._has_type([], [])
-    assert result == False
+    assert not result
 
 
 def test_format_datetime_function():

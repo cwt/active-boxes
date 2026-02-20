@@ -328,7 +328,7 @@ def test_person_with_extended_properties():
     assert person.preferredUsername == "testuser"
     assert person.followers == "https://example.com/person/1/followers"
     assert person.following == "https://example.com/person/1/following"
-    assert person.manuallyApprovesFollowers == False
+    assert not person.manuallyApprovesFollowers
     assert person.endpoints["sharedInbox"] == "https://example.com/inbox"
     assert person.featured == "https://example.com/person/1/featured"
 
@@ -540,6 +540,132 @@ def test_accept_activity():
     ap.use_backend(None)
 
 
+def test_reject_activity():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add the actors to the mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User 1",
+        "preferredUsername": "testuser1",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/person/2"] = {
+        "type": "Person",
+        "id": "https://example.com/person/2",
+        "name": "Test User 2",
+        "preferredUsername": "testuser2",
+        "inbox": "https://example.com/person/2/inbox",
+        "outbox": "https://example.com/person/2/outbox",
+    }
+
+    # Test Follow activity first
+    follow_data = {
+        "type": "Follow",
+        "id": "https://example.com/follow/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/person/2",
+    }
+
+    follow = ap.parse_activity(follow_data)
+    assert isinstance(follow, ap.Follow)
+    assert follow.id == "https://example.com/follow/1"
+    assert follow.actor == "https://example.com/person/1"
+    assert follow.object == "https://example.com/person/2"
+
+    # Test Reject activity
+    reject_data = {
+        "type": "Reject",
+        "id": "https://example.com/reject/1",
+        "actor": "https://example.com/person/2",
+        "object": follow_data,  # Rejecting the Follow activity
+    }
+
+    reject = ap.parse_activity(reject_data)
+    assert isinstance(reject, ap.Reject)
+    assert reject.id == "https://example.com/reject/1"
+    assert reject.actor == "https://example.com/person/2"
+
+    obj = reject.get_object()
+    assert isinstance(obj, ap.Follow)
+    assert obj.id == "https://example.com/follow/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_add_activity():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test Add activity
+    add_data = {
+        "type": "Add",
+        "id": "https://example.com/add/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+        "target": "https://example.com/collection/1",
+    }
+
+    add = ap.parse_activity(add_data)
+    assert isinstance(add, ap.Add)
+    assert add.id == "https://example.com/add/1"
+    assert add.actor == "https://example.com/person/1"
+    assert add.object == "https://example.com/note/1"
+    assert add.get_target() == "https://example.com/collection/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_remove_activity():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Add actor to mock data
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test Remove activity
+    remove_data = {
+        "type": "Remove",
+        "id": "https://example.com/remove/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+        "target": "https://example.com/collection/1",
+    }
+
+    remove = ap.parse_activity(remove_data)
+    assert isinstance(remove, ap.Remove)
+    assert remove.id == "https://example.com/remove/1"
+    assert remove.actor == "https://example.com/person/1"
+    assert remove.object == "https://example.com/note/1"
+    assert remove.get_target() == "https://example.com/collection/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
 def test_undo_activity():
     back = InMemBackend()
     ap.use_backend(back)
@@ -671,7 +797,7 @@ def test_note_activity_with_all_properties():
     assert note.content == "This is a test note"
     assert note.attributedTo == "https://example.com/person/1"
     assert note.published == "2023-01-01T12:00:00Z"
-    assert note.sensitive == True
+    assert note.sensitive
 
     # Test methods
     assert note.has_mention("https://example.com/person/2")
@@ -943,17 +1069,6 @@ def test_get_actor_edge_cases():
             # Override to bypass normal validation and test error path
             return actor
 
-    activity_data = {
-        "type": "Create",
-        "actor": ["https://example.com/person/1", 123],  # Mixed valid/invalid
-        "object": {
-            "type": "Note",
-            "content": "Test note",
-            "id": "https://example.com/note/1",
-            "attributedTo": "https://example.com/person/1",
-        },
-    }
-
     # We can't easily test this path without modifying the class
     # Let's just verify the existing functionality works
 
@@ -1125,7 +1240,7 @@ def test_base_activity_recipients_exceptions():
     }
     activity = ap.parse_activity(activity_data)
     # Should not crash, exceptions should be handled
-    recipients = activity.recipients()
+    _ = activity.recipients()
     # Just verify it doesn't crash
 
     # Restore backend

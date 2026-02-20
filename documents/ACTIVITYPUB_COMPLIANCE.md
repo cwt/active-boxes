@@ -1,4 +1,4 @@
-# ActivityPub Protocol Compliance Requirements - ✅ COMPLETED
+# ActivityPub Protocol Compliance Requirements - Mostly Compliant
 
 ## Overview
 
@@ -52,10 +52,10 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
   - Audio - ✅ COMPLETED
   - Document - ✅ COMPLETED
   - Page - ✅ COMPLETED
-  - Event - ✅ COMPLETED
-  - Place - ✅ COMPLETED
-  - Profile - ✅ COMPLETED
-  - Relationship - ✅ COMPLETED
+  - Event - ❌ NOT IMPLEMENTED
+  - Place - ❌ NOT IMPLEMENTED
+  - Profile - ❌ NOT IMPLEMENTED
+  - Relationship - ❌ NOT IMPLEMENTED
   - Tombstone - ✅ COMPLETED
 
 #### 2.2. Required Properties - ✅ COMPLETED
@@ -219,7 +219,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ## Compliance Checklist - ✅ COMPLETED
 
-### Server Implementation - ✅ COMPLETED
+### Server Implementation - Mostly Compliant
 - [x] Client to Server API - ✅ COMPLETED
 - [x] Server to Server API - ✅ COMPLETED
 - [x] Inbox processing - ✅ COMPLETED
@@ -230,8 +230,8 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ### Object Requirements - ✅ COMPLETED
 - [x] All required actor types - ✅ COMPLETED
-- [x] All required activity types - ✅ COMPLETED
-- [x] All required object types - ✅ COMPLETED
+- [x] All required activity types - Mostly Implemented
+- [x] All required object types - Partially Implemented
 - [x] Required properties validation - ✅ COMPLETED
 - [x] Collection support - ✅ COMPLETED
 

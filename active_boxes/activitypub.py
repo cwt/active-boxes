@@ -116,6 +116,9 @@ class ActivityType(Enum):
     DELETE = "Delete"
     UNDO = "Undo"
 
+    ADD = "Add"
+    REMOVE = "Remove"
+
     IMAGE = "Image"
     TOMBSTONE = "Tombstone"
 
@@ -175,7 +178,7 @@ def parse_activity(
             expected_type and activity_type != expected_type
         ):
             raise UnexpectedActivityTypeError(
-                f'expected a {expected_type.name} activity, got a {payload["type"]}: {payload}'
+                f"expected a {expected_type.name} activity, got a {payload['type']}: {payload}"
             )
         case _:
             pass
@@ -185,7 +188,7 @@ def parse_activity(
             return _ACTIVITY_CLS[activity_type](**payload)
         case _:
             raise BadActivityError(
-                f'unsupported activity type {payload["type"]}: {payload}'
+                f"unsupported activity type {payload['type']}: {payload}"
             )
 
 
@@ -272,6 +275,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
     OBJECT_REQUIRED = False  # Whether the object field is required or note
     ALLOWED_OBJECT_TYPES: List[ActivityType] = []
     ACTOR_REQUIRED = True  # Most of the object requires an actor, so this flag in on by default
+    TARGET_REQUIRED = False  # Whether the target field is required
 
     def __init__(self, **kwargs) -> None:  # noqa: C901
         if not self.ACTIVITY_TYPE:
@@ -342,6 +346,18 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                     raise BadActivityError(
                         f"invalid object type ({type(obj).__qualname__}): {obj!r}"
                     )
+
+        if self.TARGET_REQUIRED:
+            if "target" not in kwargs:
+                raise BadActivityError("missing target")
+            target = kwargs.pop("target")
+            # Basic validation: target should be a string (IRI) or dict with type
+            if isinstance(target, str):
+                self._data["target"] = target
+            elif isinstance(target, dict) and "type" in target:
+                self._data["target"] = target
+            else:
+                raise BadActivityError("invalid target")
 
         if "@context" not in kwargs:
             self._data["@context"] = CTX_AS
@@ -485,7 +501,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
             actor["type"], ACTOR_TYPES
         ):
             raise UnexpectedActivityTypeError(
-                f'actor has wrong type {actor["type"]!r}'
+                f"actor has wrong type {actor['type']!r}"
             )
 
         return actor["id"]
@@ -515,12 +531,24 @@ class BaseActivity(object, metaclass=_ActivityMeta):
             obj = backend.fetch_iri(self._data["object"])
             if ActivityType(obj.get("type")) not in self.ALLOWED_OBJECT_TYPES:
                 raise UnexpectedActivityTypeError(
-                    f'invalid object type {obj.get("type")!r}'
+                    f"invalid object type {obj.get('type')!r}"
                 )
             p = parse_activity(obj)
 
         self.__obj = p
         return p
+
+    def get_target(self) -> str:
+        """Returns the target as an IRI string."""
+        target = self._data.get("target")
+        if not target:
+            raise BadActivityError("activity has no target")
+        if isinstance(target, str):
+            return target
+        elif isinstance(target, dict) and "id" in target:
+            return target["id"]
+        else:
+            raise BadActivityError("invalid target format")
 
     def reset_object_cache(self) -> None:
         self.__obj = None
@@ -543,7 +571,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 data["object"] = data["object"]["id"]
             except KeyError:
                 raise BadActivityError(
-                    f'embedded object {data["object"]!r} should have an id'
+                    f"embedded object {data['object']!r} should have an id"
                 )
 
         return data
@@ -734,6 +762,16 @@ class Accept(BaseActivity):
         return [self.get_object().get_actor().id]
 
 
+class Reject(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.REJECT
+    ALLOWED_OBJECT_TYPES = [ActivityType.FOLLOW]
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        return [self.get_object().get_actor().id]
+
+
 class Undo(BaseActivity):
     ACTIVITY_TYPE = ActivityType.UNDO
     ALLOWED_OBJECT_TYPES = [
@@ -751,6 +789,20 @@ class Undo(BaseActivity):
             return [obj.get_object().id]
         else:
             return [obj.get_object().get_actor().id]
+
+
+class Add(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.ADD
+    OBJECT_REQUIRED = True
+    TARGET_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+
+class Remove(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.REMOVE
+    OBJECT_REQUIRED = True
+    TARGET_REQUIRED = True
+    ACTOR_REQUIRED = True
 
 
 class Like(BaseActivity):

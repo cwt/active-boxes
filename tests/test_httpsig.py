@@ -162,7 +162,7 @@ def test_verify_h():
     signature = signer.sign(digest)
 
     # Verify the signature
-    result = httpsig._verify_h(test_string, signature, k.privkey)
+    _ = httpsig._verify_h(test_string, signature, k.privkey)
     # Note: Since we're using the private key for verification (which is incorrect),
     # this test might not work as expected. In a real scenario, we'd use the public key.
     # Let's just test that the function doesn't crash.

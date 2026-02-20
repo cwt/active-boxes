@@ -263,7 +263,7 @@ def test_get_actor_exceptions(backend):
 
     # Test that activity creation raises UnexpectedActivityTypeError for invalid actor type
     with pytest.raises(UnexpectedActivityTypeError):
-        activity = ap.Create(
+        _ = ap.Create(
             type="Create",
             actor="https://example.com/invalid/actor",
             object={
@@ -1223,7 +1223,7 @@ def test_base_activity_recipients_exceptions():
     }
     activity = ap.parse_activity(activity_data)
     # Should not crash, exceptions should be handled
-    recipients = activity.recipients()
+    _ = activity.recipients()
     # Just verify it doesn't crash
 
     # Restore backend

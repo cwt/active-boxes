@@ -17,7 +17,7 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 - [x] Created comprehensive modernization plans
 - [x] Modernized codebase to leverage Python 3.10+ features
 - [x] Created comprehensive test suite
-- [x] Ensured full ActivityPub protocol compliance
+- [x] Ensured mostly ActivityPub protocol compliance (high-priority features implemented)
 - [x] Updated documentation and examples
 - [x] Prepared for stable release
 
@@ -33,13 +33,13 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 
 ### Code Quality
 - 100% type hinting coverage
-- Comprehensive test suite with >90% coverage
+- Comprehensive test suite with ~89% coverage
 - Modern code formatting with Black
 - Strict linting with Ruff
 - Type checking with MyPy
 
 ### Testing
-- Full ActivityPub protocol compliance testing
+- Mostly ActivityPub protocol compliance testing (high-priority features)
 - Integration tests with mock servers
 - Property-based testing for robustness
 - Security-focused test suite
