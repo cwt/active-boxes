@@ -113,6 +113,67 @@ def test_event_object():
     ap.use_backend(None)
 
 
+def test_place_object():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test creating a Place object
+    place_data = {
+        "type": "Place",
+        "id": "https://example.com/place/1",
+        "name": "Test Place",
+        "latitude": 40.7128,
+        "longitude": -74.0060,
+        "address": {
+            "type": "PostalAddress",
+            "streetAddress": "123 Main St",
+            "addressLocality": "New York",
+            "addressRegion": "NY",
+            "postalCode": "10001",
+            "addressCountry": "US",
+        },
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    place = ap.parse_activity(place_data)
+    assert isinstance(place, ap.Place)
+    assert place.id == "https://example.com/place/1"
+    assert place.name == "Test Place"
+    assert place.latitude == 40.7128
+    assert place.longitude == -74.0060
+    assert place.address["addressLocality"] == "New York"
+    assert place.attributedTo == "https://example.com/person/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_relationship_object():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test creating a Relationship object
+    relationship_data = {
+        "type": "Relationship",
+        "id": "https://example.com/relationship/1",
+        "subject": "https://example.com/person/1",
+        "relationship": "friend",
+        "object": "https://example.com/person/2",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    relationship = ap.parse_activity(relationship_data)
+    assert isinstance(relationship, ap.Relationship)
+    assert relationship.id == "https://example.com/relationship/1"
+    assert relationship.subject == "https://example.com/person/1"
+    assert relationship.relationship == "friend"
+    assert relationship.object == "https://example.com/person/2"
+    assert relationship.attributedTo == "https://example.com/person/1"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
 def test_create_activity():
     back = InMemBackend()
     ap.use_backend(back)

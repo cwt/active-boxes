@@ -143,6 +143,8 @@ class ActivityType(Enum):
 
     PROFILE = "Profile"
     EVENT = "Event"
+    PLACE = "Place"
+    RELATIONSHIP = "Relationship"
 
 
 ACTOR_TYPES = [
@@ -965,6 +967,18 @@ class Profile(BaseActivity):
 
 class Event(BaseActivity):
     ACTIVITY_TYPE = ActivityType.EVENT
+    ACTOR_REQUIRED = False
+    OBJECT_REQUIRED = False
+
+
+class Place(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.PLACE
+    ACTOR_REQUIRED = False
+    OBJECT_REQUIRED = False
+
+
+class Relationship(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.RELATIONSHIP
     ACTOR_REQUIRED = False
     OBJECT_REQUIRED = False
 
