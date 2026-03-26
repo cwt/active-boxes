@@ -1,18 +1,23 @@
 # Active Boxes Implementation Plan
 
 ## Project Overview
+
 Active Boxes is a modernized fork of Little Boxes, a Python framework for implementing ActivityPub applications. The project provides core ActivityPub functionality while remaining database and server agnostic.
 
-## Goals - ✅ COMPLETED
-1. Modernize codebase to leverage Python 3.10+ features - ✅ COMPLETED
-2. Create comprehensive test suite with ~89% coverage - ✅ COMPLETED
-3. Ensure full ActivityPub protocol compliance - ✅ COMPLETED
-4. Update documentation and examples - ✅ COMPLETED
-5. Prepare for stable release - ✅ COMPLETED
+## Goals - ⚠️ PARTIAL
 
-## Phase 1: Infrastructure and Setup - ✅ COMPLETED
+| Goal | Status |
+|------|--------|
+| Modernize codebase to leverage Python 3.10+ features | ✅ COMPLETED |
+| Create comprehensive test suite with ~89% coverage | ✅ COMPLETED |
+| Ensure full ActivityPub protocol compliance | ⚠️ PARTIAL |
+| Update documentation and examples | ⚠️ PARTIAL |
+| Prepare for stable release | ⚠️ IN PROGRESS |
+
+## Phase 1: Infrastructure and Setup ✅ COMPLETED
 
 ### Tasks - ✅ COMPLETED
+
 - [x] Update `pyproject.toml` to require Python 3.10+
 - [x] Update development dependencies to modern versions
 - [x] Configure modern tooling:
@@ -25,14 +30,16 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 - [x] Update README with modernization status
 
 ### Deliverables - ✅ COMPLETED
+
 - Updated `pyproject.toml` with Python 3.10+ requirements
 - Modern development environment
 - CI/CD pipeline configuration
 - Pre-commit hook configuration
 
-## Phase 2: Code Modernization - ✅ COMPLETED
+## Phase 2: Code Modernization ✅ COMPLETED
 
 ### Tasks - ✅ COMPLETED
+
 - [x] Update all type hints to use modern syntax (`X | Y` instead of `Union[X, Y]`)
 - [x] Implement structural pattern matching where appropriate
 - [x] Refactor legacy code patterns to modern Python idioms
@@ -41,6 +48,7 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 - [x] Update docstrings to modern standards
 
 ### Key Areas - ✅ COMPLETED
+
 - `activitypub.py`: Core ActivityPub classes
 - `backend.py`: Backend abstraction
 - `content_helper.py`: Content processing utilities
@@ -53,13 +61,15 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 - `errors.py`: Error definitions
 
 ### Deliverables - ✅ COMPLETED
+
 - Fully modernized codebase with Python 3.10+ features
 - 100% type hinting coverage
 - Improved code readability and maintainability
 
-## Phase 3: Testing Enhancement - ✅ COMPLETED
+## Phase 3: Testing Enhancement ✅ COMPLETED
 
 ### Tasks - ✅ COMPLETED
+
 - [x] Audit current test coverage
 - [x] Add missing unit tests
 - [x] Create integration tests for ActivityPub protocol compliance
@@ -68,6 +78,7 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 - [x] Add property-based testing where appropriate
 
 ### Test Areas - ✅ COMPLETED
+
 - ActivityPub object creation and validation
 - Activity processing and side effects
 - Collection management
@@ -78,99 +89,145 @@ Active Boxes is a modernized fork of Little Boxes, a Python framework for implem
 - Content processing
 
 ### Deliverables - ✅ COMPLETED
+
 - Comprehensive test suite with ~89% coverage
 - Integration tests for protocol compliance
 - Property-based tests for robustness
 - Performance benchmarks
 
-## Phase 4: Protocol Compliance and Features - ✅ COMPLETED
+## Phase 4: Protocol Compliance and Features ⚠️ PARTIAL
 
-### Tasks - ✅ COMPLETED
+### Tasks - ⚠️ PARTIAL
+
 - [x] Audit ActivityPub protocol implementation
 - [x] Update to latest ActivityPub specification
-- [x] Add support for newer ActivityPub features
+- [ ] Add support for newer ActivityPub features - **PARTIAL**
 - [x] Implement comprehensive error handling
 - [x] Add logging and monitoring capabilities
 
-### Compliance Areas - ✅ COMPLETED
-- Server implementation requirements
-- Object and activity type support
-- Collection management
-- HTTP signatures
-- JSON-LD and context handling
-- WebFinger support
-- Security requirements
-- Federation capabilities
+### Compliance Areas - ⚠️ PARTIAL
 
-### Deliverables - ✅ COMPLETED
-- Fully ActivityPub compliant implementation
-- Comprehensive error handling
-- Logging and monitoring capabilities
-- Security enhancements
+| Area | Status | Notes |
+|------|--------|-------|
+| Server implementation | ⚠️ Partial | No delivery POST method |
+| Object/Activity types | ⚠️ Partial | Core 11 complete, extended missing |
+| Collection management | ⚠️ Partial | Basic done, pagination incomplete |
+| HTTP signatures | ✅ | Generation/verification work |
+| JSON-LD/Context | ✅ | Core done |
+| WebFinger | ✅ | Full support |
+| Security | ⚠️ Partial | Signatures done, bto/bcc not stripped |
+| Federation | ⚠️ Partial | No delivery, no deduplication |
 
-## Phase 5: Documentation and Release - ✅ COMPLETED
+### Deliverables - ⚠️ PARTIAL
 
-### Tasks - ✅ COMPLETED
-- [x] Update documentation
-- [x] Create usage examples
-- [x] Write migration guide
-- [x] Prepare for first stable release
-- [x] Publish to PyPI
+- Core ActivityPub compliant implementation ✅
+- Comprehensive error handling ✅
+- Logging and monitoring capabilities ✅
+- **Full federation: MISSING** ❌
 
-### Documentation Areas - ✅ COMPLETED
-- API documentation
-- Usage examples
-- Migration guide from Little Boxes
-- ActivityPub compliance documentation
-- Testing documentation
-- Contribution guidelines
+## Phase 5: Documentation and Release ⚠️ PARTIAL
 
-### Deliverables - ✅ COMPLETED
-- Complete documentation
-- Usage examples
-- Migration guide
-- Stable release published to PyPI
+### Tasks - ⚠️ PARTIAL
 
-## Risk Mitigation - ✅ IMPLEMENTED
+- [x] Update documentation - **PARTIAL (needs accuracy update)**
+- [x] Create usage examples - COMPLETED
+- [x] Write migration guide - COMPLETED
+- [ ] Prepare for first stable release - **IN PROGRESS**
+- [x] Published to PyPI - COMPLETED
+
+### Documentation Areas - ⚠️ PARTIAL
+
+- API documentation - COMPLETED
+- Usage examples - COMPLETED
+- Migration guide from Little Boxes - COMPLETED
+- ActivityPub compliance documentation - **NEEDS UPDATE**
+- Testing documentation - COMPLETED
+- Contribution guidelines - COMPLETED
+
+### Deliverables - ⚠️ PARTIAL
+
+- Complete documentation - **PARTIAL**
+- Usage examples - COMPLETED
+- Migration guide - COMPLETED
+- Stable release published to PyPI - COMPLETED
+
+## Risk Mitigation ⚠️ IN PROGRESS
 
 1. **Backward Compatibility**: Maintained backward compatibility where possible, provided clear migration paths - ✅ IMPLEMENTED
 2. **Incremental Implementation**: Implemented changes incrementally with thorough testing at each step - ✅ IMPLEMENTED
-3. **Community Engagement**: Engaged with the community for feedback and testing - ✅ IMPLEMENTED
+3. **Community Engagement**: Engaged with the community for feedback and testing - ⚠️ PENDING
 4. **Security Focus**: Monitored for security vulnerabilities in dependencies - ✅ IMPLEMENTED
 5. **Performance Monitoring**: Monitored performance impacts of changes - ✅ IMPLEMENTED
 
-## Success Criteria - ✅ ACHIEVED
+## Success Criteria - ⚠️ PARTIAL
 
-1. Full Python 3.10+ compatibility - ✅ ACHIEVED
-2. 100% type hinting coverage - ✅ ACHIEVED
-3. Comprehensive test suite with ~89% coverage - ✅ ACHIEVED
-4. ActivityPub protocol compliance with latest specification - ✅ ACHIEVED
-5. Modern, readable, maintainable codebase - ✅ ACHIEVED
-6. Proper documentation and usage examples - ✅ ACHIEVED
-7. Published stable release to PyPI - ✅ ACHIEVED
+| Criterion | Target | Status |
+|-----------|--------|--------|
+| Full Python 3.10+ compatibility | ✅ | ✅ ACHIEVED |
+| 100% type hinting coverage | ✅ | ✅ ACHIEVED |
+| Comprehensive test suite with ~89% coverage | ✅ | ✅ ACHIEVED |
+| ActivityPub protocol compliance | Full | ⚠️ PARTIAL |
+| Modern, readable, maintainable codebase | ✅ | ✅ ACHIEVED |
+| Proper documentation and usage examples | ✅ | ⚠️ PARTIAL |
+| Published stable release to PyPI | ✅ | ✅ ACHIEVED |
 
-## Timeline - ✅ COMPLETED
+## Timeline - ⚠️ REVISED
 
-| Week | Phase | Key Deliverables |
-|------|-------|------------------|
-| 1 | Infrastructure and Setup | Updated dependencies, CI/CD, development environment |
-| 2-3 | Code Modernization | Python 3.10+ features, type hints, refactored code |
-| 4-5 | Testing Enhancement | Comprehensive test suite, integration tests |
-| 6-7 | Protocol Compliance | ActivityPub compliance, error handling, security |
-| 8 | Documentation and Release | Documentation, examples, stable release |
+| Week | Phase | Key Deliverables | Status |
+|------|-------|------------------|--------|
+| 1 | Infrastructure and Setup | Updated dependencies, CI/CD, development environment | ✅ COMPLETED |
+| 2-3 | Code Modernization | Python 3.10+ features, type hints, refactored code | ✅ COMPLETED |
+| 4-5 | Testing Enhancement | Comprehensive test suite, integration tests | ✅ COMPLETED |
+| 6-7 | Protocol Compliance | ActivityPub compliance, error handling, security | ⚠️ PARTIAL |
+| 8 | Documentation and Release | Documentation, examples, stable release | ⚠️ PARTIAL |
+| 9-10 | **Remaining Work** | **Federation delivery, deduplication, extended activities** | **TODO** |
 
 ## Resources Needed - ✅ PROVIDED
 
-1. Development environment with Python 3.10+
-2. Access to ActivityPub test servers for integration testing
-3. Code review tools
-4. CI/CD pipeline access
-5. PyPI account for publishing
+1. Development environment with Python 3.10+ ✅
+2. Access to ActivityPub test servers for integration testing ✅
+3. Code review tools ✅
+4. CI/CD pipeline access ✅
+5. PyPI account for publishing ✅
 
-## Monitoring and Evaluation - ✅ CONDUCTED
+## Monitoring and Evaluation - ⚠️ ONGOING
 
 1. Weekly progress reviews - ✅ CONDUCTED
 2. Code quality metrics (coverage, linting, type checking) - ✅ MONITORED
 3. Performance benchmarks - ✅ CONDUCTED
 4. Security scans - ✅ PERFORMED
-5. Community feedback - ✅ COLLECTED
+5. Community feedback - ⚠️ IN PROGRESS
+
+## Remaining Implementation Work
+
+### High Priority
+
+| Feature | Description | File(s) |
+|---------|-------------|----------|
+| Delivery method | Add `deliver()` to Backend for POST to remote inboxes | backend.py |
+| HTTP Sig integration | Sign outgoing delivery requests | backend.py, httpsig.py |
+| Inbox deduplication | Track seen activity IDs | backend.py |
+| Flag activity | Moderation/reporting | activitypub.py |
+| Move activity | Actor migration | activitypub.py |
+
+### Medium Priority
+
+| Feature | Description | File(s) |
+|---------|-------------|----------|
+| Retry logic | Exponential backoff for failed deliveries | backend.py |
+| Backward pagination | Support prev link in collections | collection.py |
+| bto/bcc stripping | Remove before delivery per spec | activitypub.py |
+| streams property | Supplementary collections | activitypub.py |
+| Featured collection | Profile pages | activitypub.py |
+
+### Low Priority
+
+| Feature | Description | File(s) |
+|---------|-------------|----------|
+| Extended activities | Join, Leave, View, Listen, Read, Write, Travel, Arrive | activitypub.py |
+| per-object Likes | Likes collection on objects | activitypub.py |
+| per-object Shares | Shares collection on objects | activitypub.py |
+| Replies collection | Threaded conversations | activitypub.py |
+| Replay prevention | Verify Date header freshness | httpsig.py |
+| Origin verification | Verify activity origin | activitypub.py |
+| CSP headers | Content Security Policy | TBD |

@@ -3,13 +3,16 @@
 ## Type Hinting Improvements - ✅ COMPLETED
 
 ### Union Types - ✅ COMPLETED
+
 Replaced `Union[X, Y]` with `X | Y` syntax:
+
 - `Union[str, Dict[str, Any]]` → `str | Dict[str, Any]` - ✅ COMPLETED
 - `Union[Person, Application, Group, Organization, Service]` → `Person | Application | Group | Organization | Service` - ✅ COMPLETED
 - `Union[str, ObjectType]` → `str | ObjectType` - ✅ COMPLETED
 - `Optional[X]` → `X | None` - ✅ COMPLETED
 
 ### Better Type Annotations - ✅ COMPLETED
+
 - Added proper type hints to all functions and methods - ✅ COMPLETED
 - Used `typing.Protocol` for structural subtyping where appropriate - ✅ COMPLETED
 - Used `typing.TypedDict` for dictionary structures - ✅ COMPLETED
@@ -18,7 +21,9 @@ Replaced `Union[X, Y]` with `X | Y` syntax:
 ## Structural Pattern Matching - ✅ COMPLETED
 
 ### Activity Type Parsing - ✅ COMPLETED
+
 Replaced complex if/elif chains with match statements:
+
 ```python
 # Modern approach with pattern matching - ✅ IMPLEMENTED
 def parse_activity(payload: ObjectType, expected: ActivityType | None = None) -> "BaseActivity":
@@ -46,7 +51,9 @@ def parse_activity(payload: ObjectType, expected: ActivityType | None = None) ->
 ```
 
 ### Object Type Handling - ✅ COMPLETED
+
 Use pattern matching for object type validation:
+
 ```python
 # Modern approach with pattern matching - ✅ IMPLEMENTED
 match obj:
@@ -73,7 +80,9 @@ match obj:
 ```
 
 ## Parenthesized Context Managers - ✅ COMPLETED
+
 Use parenthesized context managers for better readability:
+
 ```python
 # Modern approach - ✅ IMPLEMENTED
 with (
@@ -85,22 +94,28 @@ with (
 ```
 
 ## Better Error Messages with Precise Location Information - ✅ COMPLETED
+
 Use the enhanced error locations in traceback (Python 3.11+ feature that builds on 3.10 improvements) - ✅ LEVERAGED
 
 ## Performance Improvements - ✅ COMPLETED
+
 - Use `functools.cache` instead of `functools.lru_cache(maxsize=None)` - ✅ IMPLEMENTED WHERE APPROPRIATE
 - Leverage faster dictionary implementation - ✅ LEVERAGED
 - Use more efficient string methods where applicable - ✅ IMPLEMENTED
 
 ## Modern String Formatting - ✅ COMPLETED
+
 Replace `.format()` and `%` formatting with f-strings:
+
 ```python
 # Modern approach - ✅ IMPLEMENTED
 f'expected a {expected.name} activity, got a {payload["type"]}: {payload}'
 ```
 
 ## Using the Walrus Operator - ✅ COMPLETED
+
 Use the walrus operator (:=) for assignments within expressions:
+
 ```python
 # Modern approach - ✅ IMPLEMENTED
 if actor := kwargs.get("actor"):
@@ -110,12 +125,15 @@ if actor := kwargs.get("actor"):
 ```
 
 ## Improved Decorators - ✅ COMPLETED
+
 Use the new decorator syntax for better type checking and readability - ✅ IMPLEMENTED
 
 ## Modern Exception Handling - ✅ COMPLETED
+
 Use exception groups and notes for better error reporting (Python 3.11 features that build on 3.10) - ✅ LEVERAGED
 
 ## Standard Library Improvements - ✅ COMPLETED
+
 - Use `importlib.metadata` instead of `importlib_metadata` (already partially implemented) - ✅ COMPLETED
 - Use `zoneinfo` instead of `pytz` for timezone handling - ✅ EVALUATED (NOT NEEDED IN THIS CODEBASE)
 - Use `graphlib` for dependency resolution where applicable - ✅ EVALUATED (NOT NEEDED IN THIS CODEBASE)

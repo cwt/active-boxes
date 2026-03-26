@@ -1,9 +1,11 @@
 # Active Boxes Modernization Summary
 
 ## Project Overview
+
 Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework written in Python. The project is database and server agnostic, providing core ActivityPub functionality.
 
 ## Modernization Goals
+
 1. **Python Version**: Update to Python 3.10+ to leverage modern language features
 2. **Code Modernization**: Refactor codebase to use Python 3.10+ features and modern coding practices
 3. **Testing**: Create comprehensive test suite with ~89% coverage
@@ -13,12 +15,14 @@ Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework 
 ## Key Planning Documents
 
 ### 1. Modernization Plan (MODERNIZE_PLAN.md)
+
 - Overview of project and current status
 - Goals for Python 3.10+ support
 - Implementation phases (Infrastructure, Code Modernization, Testing, Protocol Compliance, Documentation)
 - Success criteria and risk mitigation
 
 ### 2. Python 3.10+ Modernization (PYTHON_310_MODERNIZATION.md)
+
 - Type hinting improvements (Union types, better annotations)
 - Structural pattern matching implementation
 - Parenthesized context managers
@@ -27,6 +31,7 @@ Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework 
 - Performance improvements
 
 ### 3. Test Suite Improvements (TEST_SUITE_IMPROVEMENTS.md)
+
 - Current state analysis
 - Expansion of test coverage
 - Integration testing plans
@@ -35,6 +40,7 @@ Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework 
 - Specific test areas to address
 
 ### 4. ActivityPub Compliance (ACTIVITYPUB_COMPLIANCE.md)
+
 - Core protocol requirements
 - Server implementation details
 - Object and activity type requirements
@@ -43,6 +49,7 @@ Active Boxes is a modernized fork of Little Boxes, a tiny ActivityPub framework 
 - Compliance checklist
 
 ### 5. Implementation Plan (IMPLEMENTATION_PLAN.md)
+
 - Detailed 8-week implementation timeline
 - Phase-by-phase breakdown of tasks
 - Risk mitigation strategies

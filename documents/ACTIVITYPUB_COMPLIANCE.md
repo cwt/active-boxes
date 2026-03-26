@@ -1,254 +1,338 @@
-# ActivityPub Protocol Compliance Requirements - Fully Compliant
+# ActivityPub Protocol Compliance Requirements
 
 ## Overview
 
 ActivityPub is a decentralized social networking protocol based on the ActivityStreams 2.0 data format. It provides a client to server API for creating, updating and deleting content, as well as a federated server to server API for delivering notifications and content.
 
-## Core Protocol Requirements - ✅ COMPLETED
+## Core Protocol Requirements
 
-### 1. Server Implementation - ✅ COMPLETED
+### 1. Server Implementation
 
-#### 1.1. Client to Server Interactions - ✅ COMPLETED
-- **Create**: Clients can submit new activities to the server - ✅ COMPLETED
-- **Update**: Clients can update existing objects - ✅ COMPLETED
-- **Delete**: Clients can delete objects - ✅ COMPLETED
-- **Follow**: Clients can follow other actors - ✅ COMPLETED
-- **Undo**: Clients can undo previous activities - ✅ COMPLETED
+#### 1.1. Client to Server Interactions
 
-#### 1.2. Server to Server Interactions - ✅ COMPLETED
-- **Delivery**: Servers deliver activities to target actors' inboxes - ✅ COMPLETED
-- **Inbox**: Servers receive and process activities from other servers - ✅ COMPLETED
-- **Outbox**: Servers expose activities performed by actors - ✅ COMPLETED
-- **Follow**: Servers handle follow requests and notifications - ✅ COMPLETED
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Create | ✅ Implemented | Wraps non-Activity objects in Create automatically |
+| Update | ✅ Implemented | Supports CREATE_TYPES and ACTOR_TYPES |
+| Delete | ✅ Implemented | Handles Tombstone for deleted objects |
+| Follow | ✅ Implemented | Allowed object: ACTOR_TYPES |
+| Undo | ✅ Implemented | Supports FOLLOW, LIKE, ANNOUNCE, BLOCK undo |
+| Add | ✅ Implemented | Requires object AND target |
+| Remove | ✅ Implemented | Requires object AND target |
+| Like | ✅ Implemented | Allowed: CREATE_TYPES |
+| Block | ✅ Implemented | Simple implementation |
+| Accept | ✅ Implemented | Allowed object: FOLLOW only |
+| Reject | ✅ Implemented | Allowed object: FOLLOW only |
+| Announce | ✅ Implemented | Full boost/reshare with recipient tracking |
 
-### 2. Objects and Activities - ✅ COMPLETED
+#### 1.2. Server to Server Interactions
 
-#### 2.1. Required Object Types - ✅ COMPLETED
-- **Actor Types**:
-  - Person - ✅ COMPLETED
-  - Application - ✅ COMPLETED
-  - Group - ✅ COMPLETED
-  - Organization - ✅ COMPLETED
-  - Service - ✅ COMPLETED
-  
-- **Activity Types**:
-  - Create - ✅ COMPLETED
-  - Update - ✅ COMPLETED
-  - Delete - ✅ COMPLETED
-  - Follow - ✅ COMPLETED
-  - Accept - ✅ COMPLETED
-  - Reject - ✅ COMPLETED
-  - Add - ✅ COMPLETED
-  - Remove - ✅ COMPLETED
-  - Like - ✅ COMPLETED
-  - Announce - ✅ COMPLETED
-  - Undo - ✅ COMPLETED
-  
-- **Object Types**:
-  - Note - ✅ COMPLETED
-  - Article - ✅ COMPLETED
-  - Image - ✅ COMPLETED
-  - Video - ✅ COMPLETED
-  - Audio - ✅ COMPLETED
-  - Document - ✅ COMPLETED
-  - Page - ✅ COMPLETED
-  - Event - ✅ COMPLETED
-  - Place - ✅ COMPLETED
-  - Profile - ✅ COMPLETED
-  - Relationship - ✅ COMPLETED
-  - Tombstone - ✅ COMPLETED
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Delivery | ⚠️ Partial | recipients() computes recipients but no actual POST delivery in backend |
+| Inbox | ⚠️ Partial | No POST endpoint, no deduplication |
+| Outbox | ⚠️ Partial | GET works, no POST submission |
+| Follow handling | ✅ Implemented | Backend manages follower relationships |
+| HTTP Signatures | ✅ Implemented | httpsig.py for signing/verification |
+| LD Signatures | ✅ Implemented | linked_data_sig.py |
 
-#### 2.2. Required Properties - ✅ COMPLETED
-- **id**: Globally unique identifier - ✅ COMPLETED
-- **type**: Object type - ✅ COMPLETED
-- **actor**: Actor performing the activity - ✅ COMPLETED
-- **object**: Object of the activity - ✅ COMPLETED
-- **published**: Timestamp of publication - ✅ COMPLETED
-- **to**: Primary audience - ✅ COMPLETED
-- **cc**: Secondary audience - ✅ COMPLETED
-- **audience**: Target audience - ✅ COMPLETED
+---
 
-### 3. Collections - ✅ COMPLETED
+## Objects and Activities
 
-#### 3.1. Ordered Collections - ✅ COMPLETED
-- Support for OrderedCollection and OrderedCollectionPage - ✅ COMPLETED
-- Proper pagination implementation - ✅ COMPLETED
-- Consistent ordering - ✅ COMPLETED
+### Required Actor Types - ✅ All Implemented
 
-#### 3.2. Collection Management - ✅ COMPLETED
-- Adding and removing items - ✅ COMPLETED
-- Collection validation - ✅ COMPLETED
-- Collection serialization - ✅ COMPLETED
+- Person ✅
+- Application ✅
+- Group ✅
+- Organization ✅
+- Service ✅
 
-### 4. HTTP Signatures - ✅ COMPLETED
+### Required Activity Types
 
-#### 4.1. Signature Generation - ✅ COMPLETED
-- Proper signature header generation - ✅ COMPLETED
-- Correct digest calculation - ✅ COMPLETED
-- Key management - ✅ COMPLETED
+#### Core Activities (Sections 6.2-6.11, 7.2-7.12) - ✅ All Implemented
 
-#### 4.2. Signature Verification - ✅ COMPLETED
-- Header parsing and validation - ✅ COMPLETED
-- Digest verification - ✅ COMPLETED
-- Key retrieval and validation - ✅ COMPLETED
+| Activity | Status | Notes |
+|----------|--------|-------|
+| Create | ✅ | Object wrapping, is_public() check, attributedTo |
+| Update | ✅ | Supports CREATE_TYPES and ACTOR_TYPES |
+| Delete | ✅ | Tombstone handling, _get_actual_object() |
+| Follow | ✅ | build_undo() helper |
+| Accept | ✅ | Object: FOLLOW only |
+| Reject | ✅ | Object: FOLLOW only |
+| Add | ✅ | Requires object AND target |
+| Remove | ✅ | Requires object AND target |
+| Like | ✅ | build_undo() helper |
+| Block | ✅ | Simple implementation |
+| Undo | ✅ | FOLLOW, LIKE, ANNOUNCE, BLOCK |
+| Announce | ✅ | Recipient tracking |
 
-### 5. JSON-LD and Context - ✅ COMPLETED
+#### Extended Activities - ❌ Not Implemented
 
-#### 5.1. Context Handling - ✅ COMPLETED
-- Proper @context inclusion - ✅ COMPLETED
-- Security context support - ✅ COMPLETED
-- Extension context support - ✅ COMPLETED
+| Activity | Status | Notes |
+|----------|--------|-------|
+| Flag | ❌ | Used for reporting/moderation |
+| Move | ❌ | Actor migration |
+| Join | ❌ | Joining groups |
+| Leave | ❌ | Leaving groups |
+| View | ❌ | User viewing content |
+| Listen | ❌ | User listening to audio |
+| Read | ❌ | User reading articles |
+| Write | ❌ | Writing to collection |
+| Travel | ❌ | User traveling |
+| Arrive | ❌ | User arriving at location |
 
-#### 5.2. Serialization - ✅ COMPLETED
-- JSON-LD serialization - ✅ COMPLETED
-- ActivityStreams 2.0 compliance - ✅ COMPLETED
-- Proper content negotiation - ✅ COMPLETED
+### Required Object Types - ✅ All Implemented
 
-### 6. WebFinger - ✅ COMPLETED
+| Type | Status |
+|------|--------|
+| Note | ✅ |
+| Article | ✅ |
+| Image | ✅ |
+| Video | ✅ |
+| Audio | ✅ |
+| Document | ✅ |
+| Page | ✅ |
+| Event | ✅ |
+| Place | ✅ |
+| Profile | ✅ |
+| Relationship | ✅ |
+| Tombstone | ✅ |
+| Question | ✅ |
+| Mention | ✅ |
+| Hashtag | ✅ (via context) |
 
-#### 6.1. Resource Lookup - ✅ COMPLETED
-- WebFinger endpoint implementation - ✅ COMPLETED
-- Actor resource discovery - ✅ COMPLETED
-- Proper response format - ✅ COMPLETED
+### Actor Properties
 
-### 7. Security Requirements - ✅ COMPLETED
+#### Required - ✅ All Implemented
 
-#### 7.1. Authentication - ✅ COMPLETED
-- HTTP Signature authentication - ✅ COMPLETED
-- Token-based authentication (optional) - ✅ EVALUATED (NOT IMPLEMENTED AS NOT REQUIRED)
-- Session management - ✅ EVALUATED (NOT IMPLEMENTED AS NOT REQUIRED)
+| Property | Status |
+|----------|--------|
+| inbox | ✅ |
+| outbox | ✅ |
 
-#### 7.2. Authorization - ✅ COMPLETED
-- Activity visibility controls - ✅ COMPLETED
-- Audience targeting - ✅ COMPLETED
-- Privacy controls - ✅ COMPLETED
+#### Recommended - ✅ All Implemented
 
-#### 7.3. Data Validation - ✅ COMPLETED
-- Input sanitization - ✅ COMPLETED
-- Output escaping - ✅ COMPLETED
-- Content security policies - ✅ COMPLETED
+| Property | Status |
+|----------|--------|
+| following | ✅ |
+| followers | ✅ |
+| liked | ⚠️ Partial - not explicit on actors |
 
-## Implementation Specifics - ✅ COMPLETED
+#### Optional/Mastodon Extension - ⚠️ Partial
 
-### 1. Inbox Processing - ✅ COMPLETED
+| Property | Status | Notes |
+|----------|--------|-------|
+| preferredUsername | ✅ |
+| endpoints | ⚠️ | Only sharedInbox handled |
+| sharedInbox | ✅ |
+| streams | ❌ |
+| manuallyApprovesFollowers | ⚠️ | In context but not validated |
+| publicKey | ✅ | Delegated to key.py |
 
-#### 1.1. Activity Validation - ✅ COMPLETED
-- Verify actor exists and is valid - ✅ COMPLETED
-- Validate activity type and properties - ✅ COMPLETED
-- Check signatures and authentication - ✅ COMPLETED
-- Validate object integrity - ✅ COMPLETED
+---
 
-#### 1.2. Side Effects - ✅ COMPLETED
-- Update collections - ✅ COMPLETED
-- Send notifications - ✅ EVALUATED (NOT IMPLEMENTED AS OUT OF SCOPE)
-- Trigger additional activities - ✅ COMPLETED
-- Update search indexes - ✅ EVALUATED (NOT IMPLEMENTED AS OUT OF SCOPE)
+## Collections
 
-### 2. Outbox Processing - ✅ COMPLETED
+### Collection Classes - ✅ Implemented
 
-#### 2.1. Activity Creation - ✅ COMPLETED
-- Generate unique identifiers - ✅ COMPLETED
-- Set publication timestamps - ✅ COMPLETED
-- Apply visibility controls - ✅ COMPLETED
-- Add to actor's outbox - ✅ COMPLETED
+| Collection | Status |
+|------------|--------|
+| Collection | ✅ |
+| OrderedCollection | ✅ |
+| CollectionPage | ✅ |
+| OrderedCollectionPage | ✅ |
 
-#### 2.2. Delivery - ✅ COMPLETED
-- Identify target inboxes - ✅ COMPLETED
-- Generate appropriate payloads - ✅ COMPLETED
-- Handle delivery failures - ✅ COMPLETED
-- Implement retry logic - ✅ COMPLETED
+### Collection Pagination - ⚠️ Partial
 
-### 3. Federation - ✅ COMPLETED
+| Feature | Status | Notes |
+|---------|--------|-------|
+| first link | ✅ | Followed automatically |
+| next link | ✅ | Forward pagination |
+| prev link | ❌ | No backward pagination |
+| last link | ❌ | Not implemented |
+| partOf | ❌ | No validation |
+| totalItems | ❌ | Not tracked |
+| Recursion limit | ⚠️ | Limited to 3 levels |
 
-#### 3.1. Actor Discovery - ✅ COMPLETED
-- WebFinger lookup - ✅ COMPLETED
-- Actor profile retrieval - ✅ COMPLETED
-- Key discovery - ✅ COMPLETED
+### Special Collections
 
-#### 3.2. Content Distribution - ✅ COMPLETED
-- Audience targeting - ✅ COMPLETED
-- Inbox delivery - ✅ COMPLETED
-- Follower management - ✅ COMPLETED
-- Block list handling - ✅ COMPLETED
+| Collection | Status | Notes |
+|------------|--------|-------|
+| Outbox | ✅ | OrderedCollection |
+| Inbox | ✅ | OrderedCollection |
+| Followers | ✅ | Collection or OrderedCollection |
+| Following | ✅ | Collection or OrderedCollection |
+| Liked | ❌ | Not explicitly on actors |
+| Likes (per-object) | ❌ | Not implemented |
+| Shares (per-object) | ❌ | Not implemented |
+| Featured | ⚠️ | In context but no class |
+| Replies | ❌ | Not implemented |
 
-## Testing Requirements - ✅ COMPLETED
+---
 
-### 1. Protocol Compliance Tests - ✅ COMPLETED
+## HTTP Signatures - ✅ Implemented
 
-#### 1.1. Object Creation and Validation - ✅ COMPLETED
-- Test all required object types - ✅ COMPLETED
-- Validate required properties - ✅ COMPLETED
-- Test error conditions - ✅ COMPLETED
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Signature Generation | ✅ | HTTPSigAuth class |
+| Signature Verification | ✅ | verify_request() |
+| Digest Header | ✅ | RFC 7231 compliant |
+| Date Header | ✅ | Replay attack prevention |
+| Key Retrieval | ✅ | Via actor publicKey |
 
-#### 1.2. Activity Processing - ✅ COMPLETED
-- Test all activity types - ✅ COMPLETED
-- Validate side effects - ✅ COMPLETED
-- Test error handling - ✅ COMPLETED
+---
 
-#### 1.3. Collection Management - ✅ COMPLETED
-- Test collection creation - ✅ COMPLETED
-- Validate pagination - ✅ COMPLETED
-- Test item management - ✅ COMPLETED
+## JSON-LD and Context - ✅ Implemented
 
-### 2. Security Tests - ✅ COMPLETED
+| Feature | Status |
+|---------|--------|
+| @context inclusion | ✅ |
+| Security context | ✅ |
+| Extension context | ✅ |
+| JSON-LD serialization | ✅ |
+| ActivityStreams 2.0 | ✅ |
+| Content negotiation | ⚠️ | application/activity+json only, no application/ld+json |
 
-#### 2.1. Signature Verification - ✅ COMPLETED
-- Test valid signatures - ✅ COMPLETED
-- Test invalid signatures - ✅ COMPLETED
-- Test expired signatures - ✅ COMPLETED
-- Test key rotation - ✅ COMPLETED
+---
 
-#### 2.2. Authentication - ✅ COMPLETED
-- Test HTTP Signature auth - ✅ COMPLETED
-- Test token-based auth - ✅ EVALUATED (NOT IMPLEMENTED AS NOT REQUIRED)
-- Test unauthorized access - ✅ COMPLETED
+## WebFinger - ✅ Implemented
 
-### 3. Interoperability Tests - ✅ COMPLETED
+| Feature | Status |
+|---------|--------|
+| WebFinger endpoint | ✅ |
+| Actor discovery | ✅ |
+| Proper response format | ✅ |
+| XRD/JRD format | ✅ |
 
-#### 3.1. Popular Implementation Compatibility - ✅ COMPLETED
-- Test with Mastodon - ✅ COMPLETED
-- Test with Pleroma - ✅ COMPLETED
-- Test with PeerTube - ✅ COMPLETED
-- Test with other implementations - ✅ COMPLETED
+---
 
-#### 3.2. Federation Scenarios - ✅ COMPLETED
-- Follow/unfollow workflows - ✅ COMPLETED
-- Content sharing - ✅ COMPLETED
-- Notification delivery - ✅ COMPLETED
-- Block/reject handling - ✅ COMPLETED
+## Security Requirements
 
-## Compliance Checklist - ✅ COMPLETED
+| Feature | Status | Notes |
+|---------|--------|-------|
+| HTTP Signature auth | ✅ | |
+| LD Signature | ✅ | |
+| Input validation | ✅ | |
+| Output sanitization | ✅ | Via bleach |
+| Content security | ⚠️ | Not explicit CSP headers |
+| Origin verification | ❌ | Not explicit |
+| Replay prevention | ⚠️ | Date header exists but not verified |
+| bto/bcc handling | ❌ | Not stripped from activities |
 
-### Server Implementation - Fully Compliant
-- [x] Client to Server API - ✅ COMPLETED
-- [x] Server to Server API - ✅ COMPLETED
-- [x] Inbox processing - ✅ COMPLETED
-- [x] Outbox processing - ✅ COMPLETED
-- [x] WebFinger support - ✅ COMPLETED
-- [x] HTTP Signatures - ✅ COMPLETED
-- [x] JSON-LD support - ✅ COMPLETED
+---
 
-### Object Requirements - ✅ COMPLETED
-- [x] All required actor types - ✅ COMPLETED
-- [x] All required activity types - Mostly Implemented
-- [x] All required object types - ✅ COMPLETED
-- [x] Required properties validation - ✅ COMPLETED
-- [x] Collection support - ✅ COMPLETED
+## Backend Requirements
 
-### Security Requirements - ✅ COMPLETED
-- [x] HTTP Signature generation - ✅ COMPLETED
-- [x] HTTP Signature verification - ✅ COMPLETED
-- [x] Input validation - ✅ COMPLETED
-- [x] Output sanitization - ✅ COMPLETED
-- [x] Authentication - ✅ COMPLETED
-- [x] Authorization - ✅ COMPLETED
+### Implemented
 
-### Federation Requirements - ✅ COMPLETED
-- [x] Actor discovery - ✅ COMPLETED
-- [x] Content distribution - ✅ COMPLETED
-- [x] Follower management - ✅ COMPLETED
-- [x] Block handling - ✅ COMPLETED
-- [x] Error handling - ✅ COMPLETED
+| Method | Status |
+|--------|--------|
+| base_url() | ✅ (abstract) |
+| activity_url() | ✅ (abstract) |
+| note_url() | ✅ (abstract) |
+| fetch_iri() | ✅ GET with redirects |
+| fetch_json() | ✅ GET with JSON |
+| check_url() | ✅ |
+| user_agent() | ✅ |
+| random_object_id() | ✅ |
+| extra_inboxes() | ✅ (hook) |
+| is_from_outbox() | ✅ |
+| parse_collection() | ✅ |
+
+### Missing
+
+| Feature | Status | Priority |
+|---------|--------|----------|
+| post_to_inbox/deliver() | ❌ | HIGH |
+| post_to_outbox() | ❌ | HIGH |
+| inbox deduplication | ❌ | HIGH |
+| retry/backoff | ❌ | MEDIUM |
+| HTTP sig integration in delivery | ❌ | HIGH |
+| batch delivery | ❌ | LOW |
+| delivery queue | ❌ | MEDIUM |
+
+---
+
+## Missing Features Requiring Implementation
+
+### High Priority
+
+1. **Delivery Method** - Backend needs `deliver()` or `post_to_inbox()` for HTTP POST to remote inboxes
+2. **HTTP Signature Integration** - Sign outgoing requests during delivery
+3. **Inbox Deduplication** - Track seen activity IDs to prevent reprocessing
+4. **Extended Activities** - Flag (moderation), Move (migration)
+
+### Medium Priority
+
+1. **Retry Logic** - Exponential backoff for failed deliveries
+2. **Backward Pagination** - Support prev link in collections
+3. **bto/bcc Handling** - Strip before delivery per spec
+4. **streams Property** - Supplementary collections
+5. **Featured Collection** - For profile pages
+
+### Low Priority / Nice to Have
+
+1. **Extended Activities** - Join, Leave, View, Listen, Read, Write, Travel, Arrive
+2. **per-object Likes/Shares** - Activity collections on objects
+3. **Replies Collection** - Threaded conversations
+4. **Replay Attack Prevention** - Verify Date header freshness
+5. **Origin Verification** - Verify activity origin
+6. **Content Security Policy** - Explicit CSP headers
+
+---
+
+## Compliance Checklist
+
+### Server Implementation
+
+| Requirement | Status |
+|-------------|--------|
+| Client to Server API | ⚠️ Partial |
+| Server to Server API | ⚠️ Partial |
+| Inbox processing | ⚠️ Partial |
+| Outbox processing | ⚠️ Partial |
+| WebFinger support | ✅ |
+| HTTP Signatures | ✅ |
+| LD Signatures | ✅ |
+| JSON-LD support | ✅ |
+
+### Object Requirements
+
+| Requirement | Status |
+|-------------|--------|
+| Actor types | ✅ All |
+| Activity types (core) | ✅ All |
+| Activity types (extended) | ❌ Most missing |
+| Object types | ✅ All |
+| Properties validation | ✅ |
+| Collection support | ⚠️ Partial |
+
+### Security Requirements
+
+| Requirement | Status |
+|-------------|--------|
+| HTTP Signature generation | ✅ |
+| HTTP Signature verification | ✅ |
+| LD Signature | ✅ |
+| Input validation | ✅ |
+| Output sanitization | ✅ |
+| Authentication | ✅ |
+| Authorization | ⚠️ Partial |
+| bto/bcc handling | ❌ |
+
+### Federation Requirements
+
+| Requirement | Status |
+|-------------|--------|
+| Actor discovery | ✅ |
+| Content distribution | ⚠️ Partial (no delivery) |
+| Follower management | ✅ |
+| Block handling | ✅ |
+| Error handling | ✅ |
+| Deduplication | ❌ |
+
+---
 
 ## References
 
