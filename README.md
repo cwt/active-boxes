@@ -2,7 +2,7 @@
 
 This project is a fork of [Little Boxes](https://github.com/tsileo/little-boxes) that has been modernized and relicensed from ISC to MIT.
 
-⚠️ **Modernization Complete, ActivityPub Compliance In Progress** ⚠️
+**Modernization Complete, ActivityPub Compliance In Progress**
 
 This project has been successfully modernized and updated to current Python packaging standards and Python 3.10+ features. Core ActivityPub functionality is implemented, with federation delivery features under development.
 
@@ -17,7 +17,7 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 - [x] Created comprehensive modernization plans
 - [x] Modernized codebase to leverage Python 3.10+ features
 - [x] Created comprehensive test suite
-- [~] ActivityPub protocol compliance - Core 11 activities ✅, Extended activities ⚠️
+- [x] ActivityPub protocol compliance - Core 11 activities, Extended activities
 - [x] Updated documentation and examples
 - [x] Prepared for stable release
 
@@ -35,45 +35,49 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 ### Code Quality
 
 - 100% type hinting coverage
-- Comprehensive test suite with ~89% coverage
+- Comprehensive test suite with ~89% code coverage
 - Modern code formatting with Black
 - Strict linting with Ruff
 - Type checking with MyPy
 
 ### Testing
 
-- ActivityPub protocol compliance testing (core activities)
+- ActivityPub protocol compliance testing (core + extended activities)
 - Integration tests with mock servers
 - Property-based testing for robustness
 - Security-focused test suite (~89% coverage)
 
 ## Implemented ActivityPub Features
 
-### Core Activities ✅
+### Core Activities [x]
 
 Create, Update, Delete, Follow, Accept, Reject, Add, Remove, Like, Block, Undo, Announce
 
-### Actor Properties ✅
+### Extended Activities [x]
+
+Flag, Move, Join, Leave, View, Listen, Read, Write, Travel, Arrive
+
+### Actor Properties [x]
 
 inbox, outbox, following, followers, preferredUsername, endpoints (sharedInbox)
 
-### Collections ✅
+### Collections [x]
 
 Collection, OrderedCollection, CollectionPage, OrderedCollectionPage
 
-### Security ✅
+### Security [x]
 
 HTTP Signatures (generation/verification), Linked Data Signatures
 
-### Plugin Interface ✅
+### Plugin Interface [x]
 
 `active_boxes.plugin.ActivityPubPlugin` - Protocol defining app responsibilities
 
 ### Missing (Under Development)
 
-- Extended activities: Flag, Move, Join, Leave, View, Listen, Read, Write, Travel, Arrive
 - Per-object Likes/Shares collections
 - Backward pagination in collections
+- Featured collection support
 
 ## Quick Start
 

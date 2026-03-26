@@ -12,198 +12,198 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Create | ✅ Implemented | Wraps non-Activity objects in Create automatically |
-| Update | ✅ Implemented | Supports CREATE_TYPES and ACTOR_TYPES |
-| Delete | ✅ Implemented | Handles Tombstone for deleted objects |
-| Follow | ✅ Implemented | Allowed object: ACTOR_TYPES |
-| Undo | ✅ Implemented | Supports FOLLOW, LIKE, ANNOUNCE, BLOCK undo |
-| Add | ✅ Implemented | Requires object AND target |
-| Remove | ✅ Implemented | Requires object AND target |
-| Like | ✅ Implemented | Allowed: CREATE_TYPES |
-| Block | ✅ Implemented | Simple implementation |
-| Accept | ✅ Implemented | Allowed object: FOLLOW only |
-| Reject | ✅ Implemented | Allowed object: FOLLOW only |
-| Announce | ✅ Implemented | Full boost/reshare with recipient tracking |
+| Create | [x] Implemented | Wraps non-Activity objects in Create automatically |
+| Update | [x] Implemented | Supports CREATE_TYPES and ACTOR_TYPES |
+| Delete | [x] Implemented | Handles Tombstone for deleted objects |
+| Follow | [x] Implemented | Allowed object: ACTOR_TYPES |
+| Undo | [x] Implemented | Supports FOLLOW, LIKE, ANNOUNCE, BLOCK undo |
+| Add | [x] Implemented | Requires object AND target |
+| Remove | [x] Implemented | Requires object AND target |
+| Like | [x] Implemented | Allowed: CREATE_TYPES |
+| Block | [x] Implemented | Simple implementation |
+| Accept | [x] Implemented | Allowed object: FOLLOW only |
+| Reject | [x] Implemented | Allowed object: FOLLOW only |
+| Announce | [x] Implemented | Full boost/reshare with recipient tracking |
 
 #### 1.2. Server to Server Interactions
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Delivery | ⚠️ Partial | recipients() computes recipients but no actual POST delivery in backend |
-| Inbox | ⚠️ Partial | No POST endpoint, no deduplication |
-| Outbox | ⚠️ Partial | GET works, no POST submission |
-| Follow handling | ✅ Implemented | Backend manages follower relationships |
-| HTTP Signatures | ✅ Implemented | httpsig.py for signing/verification |
-| LD Signatures | ✅ Implemented | linked_data_sig.py |
+| Delivery | [-] Partial | recipients() computes recipients but no actual POST delivery in backend |
+| Inbox | [-] Partial | No POST endpoint, no deduplication |
+| Outbox | [-] Partial | GET works, no POST submission |
+| Follow handling | [x] Implemented | Backend manages follower relationships |
+| HTTP Signatures | [x] Implemented | httpsig.py for signing/verification |
+| LD Signatures | [x] Implemented | linked_data_sig.py |
 
 ---
 
 ## Objects and Activities
 
-### Required Actor Types - ✅ All Implemented
+### Required Actor Types - [x] All Implemented
 
-- Person ✅
-- Application ✅
-- Group ✅
-- Organization ✅
-- Service ✅
+- Person [x]
+- Application [x]
+- Group [x]
+- Organization [x]
+- Service [x]
 
 ### Required Activity Types
 
-#### Core Activities (Sections 6.2-6.11, 7.2-7.12) - ✅ All Implemented
+#### Core Activities (Sections 6.2-6.11, 7.2-7.12) - [x] All Implemented
 
 | Activity | Status | Notes |
 |----------|--------|-------|
-| Create | ✅ | Object wrapping, is_public() check, attributedTo |
-| Update | ✅ | Supports CREATE_TYPES and ACTOR_TYPES |
-| Delete | ✅ | Tombstone handling, _get_actual_object() |
-| Follow | ✅ | build_undo() helper |
-| Accept | ✅ | Object: FOLLOW only |
-| Reject | ✅ | Object: FOLLOW only |
-| Add | ✅ | Requires object AND target |
-| Remove | ✅ | Requires object AND target |
-| Like | ✅ | build_undo() helper |
-| Block | ✅ | Simple implementation |
-| Undo | ✅ | FOLLOW, LIKE, ANNOUNCE, BLOCK |
-| Announce | ✅ | Recipient tracking |
+| Create | [x] | Object wrapping, is_public() check, attributedTo |
+| Update | [x] | Supports CREATE_TYPES and ACTOR_TYPES |
+| Delete | [x] | Tombstone handling, _get_actual_object() |
+| Follow | [x] | build_undo() helper |
+| Accept | [x] | Object: FOLLOW only |
+| Reject | [x] | Object: FOLLOW only |
+| Add | [x] | Requires object AND target |
+| Remove | [x] | Requires object AND target |
+| Like | [x] | build_undo() helper |
+| Block | [x] | Simple implementation |
+| Undo | [x] | FOLLOW, LIKE, ANNOUNCE, BLOCK |
+| Announce | [x] | Recipient tracking |
 
-#### Extended Activities - ❌ Not Implemented
+#### Extended Activities - [x] Implemented
 
 | Activity | Status | Notes |
 |----------|--------|-------|
-| Flag | ❌ | Used for reporting/moderation |
-| Move | ❌ | Actor migration |
-| Join | ❌ | Joining groups |
-| Leave | ❌ | Leaving groups |
-| View | ❌ | User viewing content |
-| Listen | ❌ | User listening to audio |
-| Read | ❌ | User reading articles |
-| Write | ❌ | Writing to collection |
-| Travel | ❌ | User traveling |
-| Arrive | ❌ | User arriving at location |
+| Flag | [x] | Used for reporting/moderation |
+| Move | [x] | Actor migration |
+| Join | [x] | Joining groups |
+| Leave | [x] | Leaving groups |
+| View | [x] | User viewing content |
+| Listen | [x] | User listening to audio |
+| Read | [x] | User reading articles |
+| Write | [x] | Writing to collection |
+| Travel | [x] | User traveling |
+| Arrive | [x] | User arriving at location |
 
-### Required Object Types - ✅ All Implemented
+### Required Object Types - [x] All Implemented
 
 | Type | Status |
 |------|--------|
-| Note | ✅ |
-| Article | ✅ |
-| Image | ✅ |
-| Video | ✅ |
-| Audio | ✅ |
-| Document | ✅ |
-| Page | ✅ |
-| Event | ✅ |
-| Place | ✅ |
-| Profile | ✅ |
-| Relationship | ✅ |
-| Tombstone | ✅ |
-| Question | ✅ |
-| Mention | ✅ |
-| Hashtag | ✅ (via context) |
+| Note | [x] |
+| Article | [x] |
+| Image | [x] |
+| Video | [x] |
+| Audio | [x] |
+| Document | [x] |
+| Page | [x] |
+| Event | [x] |
+| Place | [x] |
+| Profile | [x] |
+| Relationship | [x] |
+| Tombstone | [x] |
+| Question | [x] |
+| Mention | [x] |
+| Hashtag | [x] (via context) |
 
 ### Actor Properties
 
-#### Required - ✅ All Implemented
+#### Required - [x] All Implemented
 
 | Property | Status |
 |----------|--------|
-| inbox | ✅ |
-| outbox | ✅ |
+| inbox | [x] |
+| outbox | [x] |
 
-#### Recommended - ✅ All Implemented
+#### Recommended - [x] All Implemented
 
 | Property | Status |
 |----------|--------|
-| following | ✅ |
-| followers | ✅ |
-| liked | ⚠️ Partial - not explicit on actors |
+| following | [x] |
+| followers | [x] |
+| liked | [-] Partial - not explicit on actors |
 
-#### Optional/Mastodon Extension - ⚠️ Partial
+#### Optional/Mastodon Extension - [-] Partial
 
 | Property | Status | Notes |
 |----------|--------|-------|
-| preferredUsername | ✅ |
-| endpoints | ⚠️ | Only sharedInbox handled |
-| sharedInbox | ✅ |
-| streams | ❌ |
-| manuallyApprovesFollowers | ⚠️ | In context but not validated |
-| publicKey | ✅ | Delegated to key.py |
+| preferredUsername | [x] |
+| endpoints | [-] | Only sharedInbox handled |
+| sharedInbox | [x] |
+| streams | [ ] |
+| manuallyApprovesFollowers | [-] | In context but not validated |
+| publicKey | [x] | Delegated to key.py |
 
 ---
 
 ## Collections
 
-### Collection Classes - ✅ Implemented
+### Collection Classes - [x] Implemented
 
 | Collection | Status |
 |------------|--------|
-| Collection | ✅ |
-| OrderedCollection | ✅ |
-| CollectionPage | ✅ |
-| OrderedCollectionPage | ✅ |
+| Collection | [x] |
+| OrderedCollection | [x] |
+| CollectionPage | [x] |
+| OrderedCollectionPage | [x] |
 
-### Collection Pagination - ⚠️ Partial
+### Collection Pagination - [-] Partial
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| first link | ✅ | Followed automatically |
-| next link | ✅ | Forward pagination |
-| prev link | ❌ | No backward pagination |
-| last link | ❌ | Not implemented |
-| partOf | ❌ | No validation |
-| totalItems | ❌ | Not tracked |
-| Recursion limit | ⚠️ | Limited to 3 levels |
+| first link | [x] | Followed automatically |
+| next link | [x] | Forward pagination |
+| prev link | [ ] | No backward pagination |
+| last link | [ ] | Not implemented |
+| partOf | [ ] | No validation |
+| totalItems | [ ] | Not tracked |
+| Recursion limit | [-] | Limited to 3 levels |
 
 ### Special Collections
 
 | Collection | Status | Notes |
 |------------|--------|-------|
-| Outbox | ✅ | OrderedCollection |
-| Inbox | ✅ | OrderedCollection |
-| Followers | ✅ | Collection or OrderedCollection |
-| Following | ✅ | Collection or OrderedCollection |
-| Liked | ❌ | Not explicitly on actors |
-| Likes (per-object) | ❌ | Not implemented |
-| Shares (per-object) | ❌ | Not implemented |
-| Featured | ⚠️ | In context but no class |
-| Replies | ❌ | Not implemented |
+| Outbox | [x] | OrderedCollection |
+| Inbox | [x] | OrderedCollection |
+| Followers | [x] | Collection or OrderedCollection |
+| Following | [x] | Collection or OrderedCollection |
+| Liked | [ ] | Not explicitly on actors |
+| Likes (per-object) | [ ] | Not implemented |
+| Shares (per-object) | [ ] | Not implemented |
+| Featured | [-] | In context but no class |
+| Replies | [ ] | Not implemented |
 
 ---
 
-## HTTP Signatures - ✅ Implemented
+## HTTP Signatures - [x] Implemented
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Signature Generation | ✅ | HTTPSigAuth class |
-| Signature Verification | ✅ | verify_request() |
-| Digest Header | ✅ | RFC 7231 compliant |
-| Date Header | ✅ | Replay attack prevention |
-| Key Retrieval | ✅ | Via actor publicKey |
+| Signature Generation | [x] | HTTPSigAuth class |
+| Signature Verification | [x] | verify_request() |
+| Digest Header | [x] | RFC 7231 compliant |
+| Date Header | [x] | Replay attack prevention |
+| Key Retrieval | [x] | Via actor publicKey |
 
 ---
 
-## JSON-LD and Context - ✅ Implemented
+## JSON-LD and Context - [x] Implemented
 
 | Feature | Status |
 |---------|--------|
-| @context inclusion | ✅ |
-| Security context | ✅ |
-| Extension context | ✅ |
-| JSON-LD serialization | ✅ |
-| ActivityStreams 2.0 | ✅ |
-| Content negotiation | ⚠️ | application/activity+json only, no application/ld+json |
+| @context inclusion | [x] |
+| Security context | [x] |
+| Extension context | [x] |
+| JSON-LD serialization | [x] |
+| ActivityStreams 2.0 | [x] |
+| Content negotiation | [-] | application/activity+json only, no application/ld+json |
 
 ---
 
-## WebFinger - ✅ Implemented
+## WebFinger - [x] Implemented
 
 | Feature | Status |
 |---------|--------|
-| WebFinger endpoint | ✅ |
-| Actor discovery | ✅ |
-| Proper response format | ✅ |
-| XRD/JRD format | ✅ |
+| WebFinger endpoint | [x] |
+| Actor discovery | [x] |
+| Proper response format | [x] |
+| XRD/JRD format | [x] |
 
 ---
 
@@ -211,14 +211,14 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| HTTP Signature auth | ✅ | |
-| LD Signature | ✅ | |
-| Input validation | ✅ | |
-| Output sanitization | ✅ | Via bleach |
-| Content security | ⚠️ | Not explicit CSP headers |
-| Origin verification | ❌ | Not explicit |
-| Replay prevention | ⚠️ | Date header exists but not verified |
-| bto/bcc handling | ❌ | Not stripped from activities |
+| HTTP Signature auth | [x] | |
+| LD Signature | [x] | |
+| Input validation | [x] | |
+| Output sanitization | [x] | Via bleach |
+| Content security | [-] | Not explicit CSP headers |
+| Origin verification | [ ] | Not explicit |
+| Replay prevention | [-] | Date header exists but not verified |
+| bto/bcc handling | [ ] | Not stripped from activities |
 
 ---
 
@@ -228,17 +228,17 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 | Method | Status |
 |--------|--------|
-| base_url() | ✅ (abstract - app implements) |
-| activity_url() | ✅ (abstract - app implements) |
-| note_url() | ✅ (abstract - app implements) |
-| fetch_iri() | ✅ GET with redirects |
-| fetch_json() | ✅ GET with JSON |
-| check_url() | ✅ |
-| user_agent() | ✅ |
-| random_object_id() | ✅ |
-| extra_inboxes() | ✅ (hook for app to add recipients) |
-| is_from_outbox() | ✅ |
-| parse_collection() | ✅ |
+| base_url() | [x] (abstract - app implements) |
+| activity_url() | [x] (abstract - app implements) |
+| note_url() | [x] (abstract - app implements) |
+| fetch_iri() | [x] GET with redirects |
+| fetch_json() | [x] GET with JSON |
+| check_url() | [x] |
+| user_agent() | [x] |
+| random_object_id() | [x] |
+| extra_inboxes() | [x] (hook for app to add recipients) |
+| is_from_outbox() | [x] |
+| parse_collection() | [x] |
 
 ### App Must Implement (via `ActivityPubPlugin` Protocol)
 
@@ -261,10 +261,10 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ### High Priority (Library Gaps - Should Implement)
 
-1. **Extended Activities** - Flag (moderation), Move (migration), Join, Leave, etc.
-2. **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
-3. **Featured Collection** - For profile pages (`toot:featured`)
-4. **Backward Pagination** - `prev` link support in collection pagination
+1. [x] **Extended Activities** - Flag, Move, Join, Leave, View, Listen, Read, Write, Travel, Arrive Implemented
+2. [ ] **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
+3. [ ] **Featured Collection** - For profile pages (`toot:featured`)
+4. [ ] **Backward Pagination** - `prev` link support in collection pagination
 
 ### High Priority (App Responsibility - See `DeliveryPlugin` Protocol)
 
@@ -299,12 +299,12 @@ The library handles:
 
 ### Low Priority / Nice to Have
 
-1. **Extended Activities** - Join, Leave, View, Listen, Read, Write, Travel, Arrive
-2. **per-object Likes/Shares** - Activity collections on objects
-3. **Replies Collection** - Threaded conversations
-4. **Replay Attack Prevention** - Verify Date header freshness
-5. **Origin Verification** - Verify activity origin
-6. **Content Security Policy** - Explicit CSP headers
+1. [x] **Extended Activities** - All implemented
+2. [ ] **per-object Likes/Shares** - Activity collections on objects
+3. [ ] **Replies Collection** - Threaded conversations
+4. [ ] **Replay Attack Prevention** - Verify Date header freshness
+5. [ ] **Origin Verification** - Verify activity origin
+6. [ ] **Content Security Policy** - Explicit CSP headers
 
 ---
 
@@ -314,49 +314,49 @@ The library handles:
 
 | Requirement | Status | Responsibility |
 |-------------|--------|----------------|
-| Client to Server API | ✅ | Library + App |
-| Server to Server API | ⚠️ Partial | Library computes, App delivers |
-| Inbox processing | ⚠️ Partial | App implements via `InboxPlugin` |
-| Outbox processing | ⚠️ Partial | App implements via `CollectionPlugin` |
-| WebFinger support | ✅ | Library |
-| HTTP Signatures | ✅ | Library (`httpsig.py`) |
-| LD Signatures | ✅ | Library (`linked_data_sig.py`) |
-| JSON-LD support | ✅ | Library |
+| Client to Server API | [x] | Library + App |
+| Server to Server API | [-] Partial | Library computes, App delivers |
+| Inbox processing | [-] Partial | App implements via `InboxPlugin` |
+| Outbox processing | [-] Partial | App implements via `CollectionPlugin` |
+| WebFinger support | [x] | Library |
+| HTTP Signatures | [x] | Library (`httpsig.py`) |
+| LD Signatures | [x] | Library (`linked_data_sig.py`) |
+| JSON-LD support | [x] | Library |
 
 ### Object Requirements
 
 | Requirement | Status |
 |-------------|--------|
-| Actor types | ✅ All |
-| Activity types (core) | ✅ All |
-| Activity types (extended) | ❌ Most missing |
-| Object types | ✅ All |
-| Properties validation | ✅ |
-| Collection support | ⚠️ Partial |
+| Actor types | [x] All |
+| Activity types (core) | [x] All |
+| Activity types (extended) | [x] All |
+| Object types | [x] All |
+| Properties validation | [x] |
+| Collection support | [-] Partial |
 
 ### Security Requirements
 
 | Requirement | Status |
 |-------------|--------|
-| HTTP Signature generation | ✅ |
-| HTTP Signature verification | ✅ |
-| LD Signature | ✅ |
-| Input validation | ✅ |
-| Output sanitization | ✅ |
-| Authentication | ✅ |
-| Authorization | ⚠️ Partial |
-| bto/bcc handling | ❌ |
+| HTTP Signature generation | [x] |
+| HTTP Signature verification | [x] |
+| LD Signature | [x] |
+| Input validation | [x] |
+| Output sanitization | [x] |
+| Authentication | [x] |
+| Authorization | [-] Partial |
+| bto/bcc handling | [ ] |
 
 ### Federation Requirements
 
 | Requirement | Status | Responsibility |
 |-------------|--------|----------------|
-| Actor discovery | ✅ | Library (via `fetch_iri`) |
-| Content distribution | ⚠️ Partial | App implements `deliver_activity()` |
-| Follower management | ✅ | Library + App |
-| Block handling | ✅ | Library |
-| Error handling | ✅ | Library |
-| Deduplication | ❌ | App via `is_duplicate()` |
+| Actor discovery | [x] | Library (via `fetch_iri`) |
+| Content distribution | [-] Partial | App implements `deliver_activity()` |
+| Follower management | [x] | Library + App |
+| Block handling | [x] | Library |
+| Error handling | [x] | Library |
+| Deduplication | [ ] | App via `is_duplicate()` |
 
 ---
 

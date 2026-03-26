@@ -1809,3 +1809,631 @@ def test_other_activity_classes():
 
     # Restore backend
     ap.use_backend(None)
+
+
+def test_flag_activity():
+    """Test Flag activity for reporting/moderation."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/person/2"] = {
+        "type": "Person",
+        "id": "https://example.com/person/2",
+        "name": "Reported User",
+        "preferredUsername": "reported",
+        "inbox": "https://example.com/person/2/inbox",
+        "outbox": "https://example.com/person/2/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/note/1"] = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Problematic content",
+        "attributedTo": "https://example.com/person/2",
+    }
+
+    # Test Flag activity with Note as object
+    flag_data = {
+        "type": "Flag",
+        "id": "https://example.com/flag/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+        "summary": "This content violates rules",
+    }
+
+    flag = ap.parse_activity(flag_data)
+    assert isinstance(flag, ap.Flag)
+    assert flag.id == "https://example.com/flag/1"
+    assert flag.actor == "https://example.com/person/1"
+    assert flag.object == "https://example.com/note/1"
+    assert flag.summary == "This content violates rules"
+
+    # Test _recipients for Flag with Note object
+    recipients = flag._recipients()
+    assert "https://example.com/person/2" in recipients  # Note's attributedTo
+
+    # Test Flag activity with Person as object
+    flag_person_data = {
+        "type": "Flag",
+        "id": "https://example.com/flag/2",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/person/2",
+    }
+
+    flag_person = ap.parse_activity(flag_person_data)
+    assert isinstance(flag_person, ap.Flag)
+
+    # _recipients should return the person being flagged
+    recipients = flag_person._recipients()
+    assert "https://example.com/person/2" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_move_activity():
+    """Test Move activity for actor migration."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test Move activity
+    move_data = {
+        "type": "Move",
+        "id": "https://example.com/move/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/person/1",
+        "target": "https://newserver.com/person/1",
+    }
+
+    move = ap.parse_activity(move_data)
+    assert isinstance(move, ap.Move)
+    assert move.id == "https://example.com/move/1"
+    assert move.actor == "https://example.com/person/1"
+    assert move.object == "https://example.com/person/1"
+    assert move.target == "https://newserver.com/person/1"
+
+    # Test _recipients returns the actor being moved
+    recipients = move._recipients()
+    assert "https://example.com/person/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_join_activity():
+    """Test Join activity for joining groups."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/group/1"] = {
+        "type": "Group",
+        "id": "https://example.com/group/1",
+        "name": "Test Group",
+        "inbox": "https://example.com/group/1/inbox",
+    }
+
+    # Test Join activity
+    join_data = {
+        "type": "Join",
+        "id": "https://example.com/join/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/group/1",
+    }
+
+    join = ap.parse_activity(join_data)
+    assert isinstance(join, ap.Join)
+    assert join.id == "https://example.com/join/1"
+    assert join.actor == "https://example.com/person/1"
+    assert join.object == "https://example.com/group/1"
+
+    # Test _recipients returns the group
+    recipients = join._recipients()
+    assert "https://example.com/group/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_leave_activity():
+    """Test Leave activity for leaving groups."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/group/1"] = {
+        "type": "Group",
+        "id": "https://example.com/group/1",
+        "name": "Test Group",
+        "inbox": "https://example.com/group/1/inbox",
+    }
+
+    # Test Leave activity
+    leave_data = {
+        "type": "Leave",
+        "id": "https://example.com/leave/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/group/1",
+    }
+
+    leave = ap.parse_activity(leave_data)
+    assert isinstance(leave, ap.Leave)
+    assert leave.id == "https://example.com/leave/1"
+    assert leave.actor == "https://example.com/person/1"
+    assert leave.object == "https://example.com/group/1"
+
+    # Test _recipients returns the group
+    recipients = leave._recipients()
+    assert "https://example.com/group/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_view_activity():
+    """Test View activity for user viewing content."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/note/1"] = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    # Test View activity
+    view_data = {
+        "type": "View",
+        "id": "https://example.com/view/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+    }
+
+    view = ap.parse_activity(view_data)
+    assert isinstance(view, ap.View)
+    assert view.id == "https://example.com/view/1"
+    assert view.actor == "https://example.com/person/1"
+    assert view.object == "https://example.com/note/1"
+
+    # Test _recipients returns the note's author
+    recipients = view._recipients()
+    assert "https://example.com/person/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_listen_activity():
+    """Test Listen activity for user listening to audio."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/audio/1"] = {
+        "type": "Audio",
+        "id": "https://example.com/audio/1",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    # Test Listen activity
+    listen_data = {
+        "type": "Listen",
+        "id": "https://example.com/listen/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/audio/1",
+    }
+
+    listen = ap.parse_activity(listen_data)
+    assert isinstance(listen, ap.Listen)
+    assert listen.id == "https://example.com/listen/1"
+    assert listen.actor == "https://example.com/person/1"
+    assert listen.object == "https://example.com/audio/1"
+
+    # Test _recipients returns the audio's author
+    recipients = listen._recipients()
+    assert "https://example.com/person/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_read_activity():
+    """Test Read activity for user reading articles."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/article/1"] = {
+        "type": "Article",
+        "id": "https://example.com/article/1",
+        "content": "Test article",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    # Test Read activity
+    read_data = {
+        "type": "Read",
+        "id": "https://example.com/read/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/article/1",
+    }
+
+    read = ap.parse_activity(read_data)
+    assert isinstance(read, ap.Read)
+    assert read.id == "https://example.com/read/1"
+    assert read.actor == "https://example.com/person/1"
+    assert read.object == "https://example.com/article/1"
+
+    # Test _recipients returns the article's author
+    recipients = read._recipients()
+    assert "https://example.com/person/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_write_activity():
+    """Test Write activity for adding items to a collection."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/note/1"] = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+    }
+
+    # Test Write activity (requires target)
+    write_data = {
+        "type": "Write",
+        "id": "https://example.com/write/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/note/1",
+        "target": "https://example.com/collection/1",
+    }
+
+    write = ap.parse_activity(write_data)
+    assert isinstance(write, ap.Write)
+    assert write.id == "https://example.com/write/1"
+    assert write.actor == "https://example.com/person/1"
+    assert write.object == "https://example.com/note/1"
+    assert write.get_target() == "https://example.com/collection/1"
+
+    # Test _recipients returns target and object's author
+    recipients = write._recipients()
+    assert "https://example.com/collection/1" in recipients
+    assert "https://example.com/person/1" in recipients
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_write_activity_requires_target():
+    """Test that Write activity requires a target."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test that Write activity without target raises error
+    with pytest.raises(ap.BadActivityError):
+        ap.Write(
+            type="Write",
+            actor="https://example.com/person/1",
+            object="https://example.com/note/1",
+        )
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_travel_activity():
+    """Test Travel activity for user traveling."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/place/1"] = {
+        "type": "Place",
+        "id": "https://example.com/place/1",
+        "name": "Test Place",
+    }
+
+    # Test Travel activity
+    travel_data = {
+        "type": "Travel",
+        "id": "https://example.com/travel/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/place/1",
+    }
+
+    travel = ap.parse_activity(travel_data)
+    assert isinstance(travel, ap.Travel)
+    assert travel.id == "https://example.com/travel/1"
+    assert travel.actor == "https://example.com/person/1"
+    assert travel.object == "https://example.com/place/1"
+
+    # Test _recipients returns empty list (no direct recipients for travel)
+    recipients = travel._recipients()
+    assert recipients == []
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_arrive_activity():
+    """Test Arrive activity for user arriving at location."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/place/1"] = {
+        "type": "Place",
+        "id": "https://example.com/place/1",
+        "name": "Test Place",
+    }
+
+    # Test Arrive activity with Place
+    arrive_data = {
+        "type": "Arrive",
+        "id": "https://example.com/arrive/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/place/1",
+    }
+
+    arrive = ap.parse_activity(arrive_data)
+    assert isinstance(arrive, ap.Arrive)
+    assert arrive.id == "https://example.com/arrive/1"
+    assert arrive.actor == "https://example.com/person/1"
+    assert arrive.object == "https://example.com/place/1"
+
+    # Test _recipients returns empty list
+    recipients = arrive._recipients()
+    assert recipients == []
+
+    # Test Arrive activity with Event
+    back.FETCH_MOCK["https://example.com/event/1"] = {
+        "type": "Event",
+        "id": "https://example.com/event/1",
+        "name": "Test Event",
+    }
+
+    arrive_event_data = {
+        "type": "Arrive",
+        "id": "https://example.com/arrive/2",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/event/1",
+    }
+
+    arrive_event = ap.parse_activity(arrive_event_data)
+    assert isinstance(arrive_event, ap.Arrive)
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_extended_activities_parsing():
+    """Test parsing all extended activities via parse_activity function."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/group/1"] = {
+        "type": "Group",
+        "id": "https://example.com/group/1",
+        "name": "Test Group",
+        "inbox": "https://example.com/group/1/inbox",
+    }
+
+    # Test each activity type can be parsed
+    activities = [
+        {
+            "type": "Flag",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+        {
+            "type": "Move",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+        {
+            "type": "Join",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/group/1",
+        },
+        {
+            "type": "Leave",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/group/1",
+        },
+        {
+            "type": "View",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+        {
+            "type": "Listen",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+        {
+            "type": "Read",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+        {
+            "type": "Travel",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+        {
+            "type": "Arrive",
+            "actor": "https://example.com/person/1",
+            "object": "https://example.com/person/1",
+        },
+    ]
+
+    for activity_data in activities:
+        activity = ap.parse_activity(activity_data)
+        assert activity is not None
+        assert activity.ACTIVITY_TYPE.value == activity_data["type"]
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_extended_activities_to_dict():
+    """Test serialization of extended activities back to dict."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    back.FETCH_MOCK["https://example.com/group/1"] = {
+        "type": "Group",
+        "id": "https://example.com/group/1",
+        "name": "Test Group",
+        "inbox": "https://example.com/group/1/inbox",
+    }
+
+    # Test Flag to_dict
+    flag_data = {
+        "type": "Flag",
+        "id": "https://example.com/flag/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/person/1",
+    }
+    flag = ap.parse_activity(flag_data)
+    flag_dict = flag.to_dict()
+    assert flag_dict["type"] == "Flag"
+    assert flag_dict["id"] == "https://example.com/flag/1"
+    assert "@context" in flag_dict
+
+    # Test Join to_dict
+    join_data = {
+        "type": "Join",
+        "id": "https://example.com/join/1",
+        "actor": "https://example.com/person/1",
+        "object": "https://example.com/group/1",
+    }
+    join = ap.parse_activity(join_data)
+    join_dict = join.to_dict()
+    assert join_dict["type"] == "Join"
+    assert join_dict["id"] == "https://example.com/join/1"
+
+    # Test to_dict with embed=True (should remove @context and signature)
+    flag_dict_embedded = flag.to_dict(embed=True)
+    assert "@context" not in flag_dict_embedded
+    assert "signature" not in flag_dict_embedded
+
+    # Restore backend
+    ap.use_backend(None)

@@ -146,6 +146,18 @@ class ActivityType(Enum):
     PLACE = "Place"
     RELATIONSHIP = "Relationship"
 
+    # Extended Activities (Section 7.13-7.21 of ActivityPub spec)
+    FLAG = "Flag"
+    MOVE = "Move"
+    JOIN = "Join"
+    LEAVE = "Leave"
+    VIEW = "View"
+    LISTEN = "Listen"
+    READ = "Read"
+    WRITE = "Write"
+    TRAVEL = "Travel"
+    ARRIVE = "Arrive"
+
 
 ACTOR_TYPES = [
     ActivityType.PERSON,
@@ -981,6 +993,178 @@ class Relationship(BaseActivity):
     ACTIVITY_TYPE = ActivityType.RELATIONSHIP
     ACTOR_REQUIRED = False
     OBJECT_REQUIRED = False
+
+
+class Flag(BaseActivity):
+    """Flag activity for reporting/moderation.
+
+    Used to flag content or actors for review.
+    The object is typically a Note or Person being reported.
+    """
+
+    ACTIVITY_TYPE = ActivityType.FLAG
+    ALLOWED_OBJECT_TYPES = CREATE_TYPES + ACTOR_TYPES
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        obj = self.get_object()
+        if obj.ACTIVITY_TYPE in ACTOR_TYPES:
+            return [obj.id]
+        return [obj.get_actor().id]
+
+
+class Move(BaseActivity):
+    """Move activity for actor migration.
+
+    Indicates that the actor is moving from one location to another.
+    The object is the actor being moved, and target is the new location.
+    """
+
+    ACTIVITY_TYPE = ActivityType.MOVE
+    ALLOWED_OBJECT_TYPES = ACTOR_TYPES
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+    TARGET_REQUIRED = False
+
+    def _recipients(self) -> List[str]:
+        obj = self.get_object()
+        return [obj.id]
+
+
+class Join(BaseActivity):
+    """Join activity for joining groups.
+
+    Indicates that the actor is joining the object (typically a Group).
+    """
+
+    ACTIVITY_TYPE = ActivityType.JOIN
+    ALLOWED_OBJECT_TYPES = [ActivityType.GROUP]
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        return [self.get_object().id]
+
+
+class Leave(BaseActivity):
+    """Leave activity for leaving groups.
+
+    Indicates that the actor is leaving the object (typically a Group).
+    """
+
+    ACTIVITY_TYPE = ActivityType.LEAVE
+    ALLOWED_OBJECT_TYPES = [ActivityType.GROUP]
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        return [self.get_object().id]
+
+
+class View(BaseActivity):
+    """View activity for user viewing content.
+
+    Indicates that the actor viewed the object.
+    """
+
+    ACTIVITY_TYPE = ActivityType.VIEW
+    ALLOWED_OBJECT_TYPES = CREATE_TYPES
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        obj = self.get_object()
+        if obj.ACTIVITY_TYPE in CREATE_TYPES:
+            return [obj.get_actor().id]
+        return []
+
+
+class Listen(BaseActivity):
+    """Listen activity for user listening to audio.
+
+    Indicates that the actor listened to the object (typically Audio).
+    """
+
+    ACTIVITY_TYPE = ActivityType.LISTEN
+    ALLOWED_OBJECT_TYPES = [ActivityType.AUDIO]
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        obj = self.get_object()
+        return [obj.get_actor().id]
+
+
+class Read(BaseActivity):
+    """Read activity for user reading articles.
+
+    Indicates that the actor read the object (typically Article or Note).
+    """
+
+    ACTIVITY_TYPE = ActivityType.READ
+    ALLOWED_OBJECT_TYPES = [ActivityType.ARTICLE] + CREATE_TYPES
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        obj = self.get_object()
+        if obj.ACTIVITY_TYPE in CREATE_TYPES:
+            return [obj.get_actor().id]
+        return []
+
+
+class Write(BaseActivity):
+    """Write activity for adding items to a collection.
+
+    Indicates that the actor wrote/added the object to the target collection.
+    """
+
+    ACTIVITY_TYPE = ActivityType.WRITE
+    ALLOWED_OBJECT_TYPES = CREATE_TYPES
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+    TARGET_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        recipients = []
+        if self.target:
+            recipients.append(self.get_target())
+        obj = self.get_object()
+        if obj.ACTIVITY_TYPE in CREATE_TYPES:
+            recipients.append(obj.get_actor().id)
+        return recipients
+
+
+class Travel(BaseActivity):
+    """Travel activity for user traveling.
+
+    Indicates that the actor is traveling to the object (typically a Place).
+    """
+
+    ACTIVITY_TYPE = ActivityType.TRAVEL
+    ALLOWED_OBJECT_TYPES = [ActivityType.PLACE]
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+    TARGET_REQUIRED = False
+
+    def _recipients(self) -> List[str]:
+        return []
+
+
+class Arrive(BaseActivity):
+    """Arrive activity for user arriving at location.
+
+    Indicates that the actor arrived at the object (typically a Place or Event).
+    """
+
+    ACTIVITY_TYPE = ActivityType.ARRIVE
+    ALLOWED_OBJECT_TYPES = [ActivityType.PLACE, ActivityType.EVENT]
+    OBJECT_REQUIRED = True
+    ACTOR_REQUIRED = True
+
+    def _recipients(self) -> List[str]:
+        return []
 
 
 class Note(BaseActivity):
