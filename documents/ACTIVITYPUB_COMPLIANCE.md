@@ -166,7 +166,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | Liked | [ ] | Not explicitly on actors |
 | Likes (per-object) | [x] | Implemented via `build_likes_collection()` |
 | Shares (per-object) | [x] | Implemented via `build_shares_collection()` |
-| Featured | [-] | In context but no class |
+| Featured | [x] | Implemented via `build_featured_collection()` |
 | Replies | [ ] | Not implemented |
 
 ---
@@ -263,7 +263,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 1. [x] **Extended Activities** - Flag, Move, Join, Leave, View, Listen, Read, Write, Travel, Arrive Implemented
 2. [x] **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
-3. [ ] **Featured Collection** - For profile pages (`toot:featured`)
+3. [x] **Featured Collection** - For profile pages (`toot:featured`)
 4. [ ] **Backward Pagination** - `prev` link support in collection pagination
 
 ### High Priority (App Responsibility - See `DeliveryPlugin` Protocol)
@@ -295,7 +295,6 @@ The library handles:
 2. **Backward Pagination** - Support prev link in collections
 3. **bto/bcc Handling** - Strip before delivery per spec
 4. **streams Property** - Supplementary collections
-5. **Featured Collection** - For profile pages
 
 ### Low Priority / Nice to Have
 

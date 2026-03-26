@@ -182,6 +182,7 @@ COLLECTION_TYPES = [ActivityType.COLLECTION, ActivityType.ORDERED_COLLECTION]
 
 LIKES_SUFFIX = "/likes"
 SHARES_SUFFIX = "/shares"
+FEATURED_SUFFIX = "/featured"
 
 
 def parse_activity(
@@ -714,6 +715,31 @@ class Person(BaseActivity):
 
     def get_key(self) -> Key:
         return Key.from_dict(self.publicKey)
+
+    def featured_url(self) -> str:
+        """Returns the URL for the featured collection of this actor."""
+        return f"{self.id}{FEATURED_SUFFIX}"
+
+    def build_featured_collection(
+        self, count: int | None = None, first_page: str | None = None
+    ) -> "OrderedCollection":
+        """Builds an OrderedCollection representing the featured posts for this actor.
+
+        Args:
+            count: Optional total count of featured items (totalItems)
+            first_page: Optional URL to the first page of the collection
+
+        Returns:
+            An OrderedCollection containing the featured activities/objects
+        """
+        kwargs: Dict[str, Any] = {
+            "id": self.featured_url(),
+        }
+        if count is not None:
+            kwargs["totalItems"] = count
+        if first_page is not None:
+            kwargs["first"] = first_page
+        return OrderedCollection(**kwargs)
 
 
 class Service(Person):
@@ -1347,3 +1373,8 @@ def likes_url(obj_id: str) -> str:
 def shares_url(obj_id: str) -> str:
     """Generate the URL for the shares (announces) collection of an object."""
     return f"{obj_id}{SHARES_SUFFIX}"
+
+
+def featured_url(actor_id: str) -> str:
+    """Generate the URL for the featured collection of an actor."""
+    return f"{actor_id}{FEATURED_SUFFIX}"

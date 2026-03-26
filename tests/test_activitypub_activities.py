@@ -2670,3 +2670,144 @@ def test_likes_shares_collection_to_dict():
 
     # Restore backend
     ap.use_backend(None)
+
+
+def test_featured_url_helper():
+    """Test the featured_url helper function."""
+    actor_id = "https://example.com/person/1"
+
+    # Test featured_url
+    featured = ap.featured_url(actor_id)
+    assert featured == "https://example.com/person/1/featured"
+
+
+def test_person_featured_url():
+    """Test the featured_url method on Person objects."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    person_data = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+    person = ap.parse_activity(person_data)
+
+    # Test featured_url method
+    featured = person.featured_url()
+    assert featured == "https://example.com/person/1/featured"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_build_featured_collection():
+    """Test building a featured collection for an actor."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    person_data = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+    person = ap.parse_activity(person_data)
+
+    # Build featured collection with count
+    featured = person.build_featured_collection(count=5)
+    assert isinstance(featured, ap.OrderedCollection)
+    assert featured.id == "https://example.com/person/1/featured"
+    assert featured.totalItems == 5
+
+    # Build featured collection with first page
+    featured_with_page = person.build_featured_collection(
+        count=10, first_page="https://example.com/person/1/featured?page=1"
+    )
+    assert featured_with_page.id == "https://example.com/person/1/featured"
+    assert featured_with_page.totalItems == 10
+    assert (
+        featured_with_page.first
+        == "https://example.com/person/1/featured?page=1"
+    )
+
+    # Build featured collection without count
+    featured_no_count = person.build_featured_collection()
+    assert featured_no_count.id == "https://example.com/person/1/featured"
+    assert featured_no_count.totalItems is None
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_featured_collection_on_other_actor_types():
+    """Test that featured collection works on other actor types."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    # Test on Service
+    service_data = {
+        "type": "Service",
+        "id": "https://example.com/service/1",
+        "name": "Test Service",
+        "inbox": "https://example.com/service/1/inbox",
+        "outbox": "https://example.com/service/1/outbox",
+    }
+    service = ap.parse_activity(service_data)
+    assert service.featured_url() == "https://example.com/service/1/featured"
+
+    # Test on Application
+    app_data = {
+        "type": "Application",
+        "id": "https://example.com/app/1",
+        "name": "Test App",
+        "inbox": "https://example.com/app/1/inbox",
+        "outbox": "https://example.com/app/1/outbox",
+    }
+    app = ap.parse_activity(app_data)
+    assert app.featured_url() == "https://example.com/app/1/featured"
+
+    # Test on Group
+    group_data = {
+        "type": "Group",
+        "id": "https://example.com/group/1",
+        "name": "Test Group",
+        "inbox": "https://example.com/group/1/inbox",
+        "outbox": "https://example.com/group/1/outbox",
+    }
+    group = ap.parse_activity(group_data)
+    assert group.featured_url() == "https://example.com/group/1/featured"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_featured_collection_to_dict():
+    """Test serialization of featured collection."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    person_data = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+    person = ap.parse_activity(person_data)
+
+    # Test featured collection to_dict
+    featured = person.build_featured_collection(count=3)
+    featured_dict = featured.to_dict()
+    assert featured_dict["type"] == "OrderedCollection"
+    assert featured_dict["id"] == "https://example.com/person/1/featured"
+    assert featured_dict["totalItems"] == 3
+
+    # Restore backend
+    ap.use_backend(None)
