@@ -224,44 +224,70 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ## Backend Requirements
 
-### Implemented
+### Implemented by Library
 
 | Method | Status |
 |--------|--------|
-| base_url() | ✅ (abstract) |
-| activity_url() | ✅ (abstract) |
-| note_url() | ✅ (abstract) |
+| base_url() | ✅ (abstract - app implements) |
+| activity_url() | ✅ (abstract - app implements) |
+| note_url() | ✅ (abstract - app implements) |
 | fetch_iri() | ✅ GET with redirects |
 | fetch_json() | ✅ GET with JSON |
 | check_url() | ✅ |
 | user_agent() | ✅ |
 | random_object_id() | ✅ |
-| extra_inboxes() | ✅ (hook) |
+| extra_inboxes() | ✅ (hook for app to add recipients) |
 | is_from_outbox() | ✅ |
 | parse_collection() | ✅ |
 
-### Missing
+### App Must Implement (via `ActivityPubPlugin` Protocol)
 
-| Feature | Status | Priority |
-|---------|--------|----------|
-| post_to_inbox/deliver() | ❌ | HIGH |
-| post_to_outbox() | ❌ | HIGH |
-| inbox deduplication | ❌ | HIGH |
-| retry/backoff | ❌ | MEDIUM |
-| HTTP sig integration in delivery | ❌ | HIGH |
-| batch delivery | ❌ | LOW |
-| delivery queue | ❌ | MEDIUM |
+| Feature | Protocol Method | Notes |
+|---------|-----------------|-------|
+| post_to_inbox/deliver() | `deliver_activity()` | Sign & POST to remote inboxes |
+| inbox deduplication | `is_duplicate()` | Track seen activity IDs |
+| activity storage | `store_activity()`/`get_activity()` | Persist activities |
+| actor caching | `store_actor()`/`get_actor()` | Cache fetched actors |
+| inbox processing | `receive_activity()` | Process incoming activities |
+| retry/backoff | App logic | Queue/retry policy is app's job |
+| batch delivery | App logic | App can batch if needed |
+| delivery queue | App logic | App manages delivery queue |
 
 ---
 
 ## Missing Features Requiring Implementation
 
-### High Priority
+> **Note:** This library defines a `plugin.Protocol` (see `active_boxes/plugin.py`) that specifies what applications MUST implement vs what the library provides. Many "missing" features below are correctly omitted because they're the application's responsibility.
 
-1. **Delivery Method** - Backend needs `deliver()` or `post_to_inbox()` for HTTP POST to remote inboxes
-2. **HTTP Signature Integration** - Sign outgoing requests during delivery
-3. **Inbox Deduplication** - Track seen activity IDs to prevent reprocessing
-4. **Extended Activities** - Flag (moderation), Move (migration)
+### High Priority (Library Gaps - Should Implement)
+
+1. **Extended Activities** - Flag (moderation), Move (migration), Join, Leave, etc.
+2. **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
+3. **Featured Collection** - For profile pages (`toot:featured`)
+4. **Backward Pagination** - `prev` link support in collection pagination
+
+### High Priority (App Responsibility - See `DeliveryPlugin` Protocol)
+
+The following are **NOT library gaps** - they require app implementation via the `ActivityPubPlugin` protocol:
+
+1. **`deliver_activity()`** - App signs and POSTs to remote inboxes
+2. **`receive_activity()`** - App processes incoming activities
+3. **`is_duplicate()`** - App tracks seen activity IDs
+4. **`store_activity()`/`get_activity()`** - App persists activities
+
+The library handles:
+
+- Computing recipients via `recipients()` method
+- Activity serialization/deserialization
+- HTTP Signature generation (via `httpsig.py`)
+- HTTP Signature verification (via `httpsig.py`)
+
+### Medium Priority
+
+1. **Retry Logic** - App responsibility (queue/retry policy)
+2. **bto/bcc Handling** - Library strips from output, app should respect
+3. **Replay Attack Prevention** - App responsibility (verify Date header freshness)
+4. **Origin Verification** - App responsibility (via `verify_origin()` hook)
 
 ### Medium Priority
 
@@ -284,18 +310,18 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ## Compliance Checklist
 
-### Server Implementation
+### Library vs App Responsibilities
 
-| Requirement | Status |
-|-------------|--------|
-| Client to Server API | ⚠️ Partial |
-| Server to Server API | ⚠️ Partial |
-| Inbox processing | ⚠️ Partial |
-| Outbox processing | ⚠️ Partial |
-| WebFinger support | ✅ |
-| HTTP Signatures | ✅ |
-| LD Signatures | ✅ |
-| JSON-LD support | ✅ |
+| Requirement | Status | Responsibility |
+|-------------|--------|----------------|
+| Client to Server API | ✅ | Library + App |
+| Server to Server API | ⚠️ Partial | Library computes, App delivers |
+| Inbox processing | ⚠️ Partial | App implements via `InboxPlugin` |
+| Outbox processing | ⚠️ Partial | App implements via `CollectionPlugin` |
+| WebFinger support | ✅ | Library |
+| HTTP Signatures | ✅ | Library (`httpsig.py`) |
+| LD Signatures | ✅ | Library (`linked_data_sig.py`) |
+| JSON-LD support | ✅ | Library |
 
 ### Object Requirements
 
@@ -323,14 +349,14 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ### Federation Requirements
 
-| Requirement | Status |
-|-------------|--------|
-| Actor discovery | ✅ |
-| Content distribution | ⚠️ Partial (no delivery) |
-| Follower management | ✅ |
-| Block handling | ✅ |
-| Error handling | ✅ |
-| Deduplication | ❌ |
+| Requirement | Status | Responsibility |
+|-------------|--------|----------------|
+| Actor discovery | ✅ | Library (via `fetch_iri`) |
+| Content distribution | ⚠️ Partial | App implements `deliver_activity()` |
+| Follower management | ✅ | Library + App |
+| Block handling | ✅ | Library |
+| Error handling | ✅ | Library |
+| Deduplication | ❌ | App via `is_duplicate()` |
 
 ---
 

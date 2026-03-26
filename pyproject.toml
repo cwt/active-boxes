@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
-version = "0.0.1.dev2"
+version = "0.1.0"
 
 [project.urls]
 Homepage = "https://github.com/cwt/active-boxes"
@@ -46,16 +46,20 @@ html2text = ">=2020.1.16"
 mdx_linkify = ">=1.5.0"
 regex = ">=2023.0.0"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.poetry.group.dev.dependencies]
 httpretty = ">=1.1.4"
 black = ">=23.0.0"
 codecov = ">=2.1.13"
 flake8 = ">=6.0.0"
 ruff = ">=0.1.0"
-pytest = "^8.4"
-pytest-cov = "^6.3"
+pytest = "^9.0"
+pytest-cov = "^7.1"
 mypy = "^1.17"
 pytest-xdist = "^3.8.0"
+pytest-asyncio = ">=0.24.0"
 types-Markdown = "*"
 types-regex = "*"
 types-requests = "*"
