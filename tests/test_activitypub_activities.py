@@ -2437,3 +2437,236 @@ def test_extended_activities_to_dict():
 
     # Restore backend
     ap.use_backend(None)
+
+
+def test_likes_shares_url_helpers():
+    """Test the likes_url and shares_url helper functions."""
+    obj_id = "https://example.com/note/1"
+
+    # Test likes_url
+    likes = ap.likes_url(obj_id)
+    assert likes == "https://example.com/note/1/likes"
+
+    # Test shares_url
+    shares = ap.shares_url(obj_id)
+    assert shares == "https://example.com/note/1/shares"
+
+    # Test with different object IDs
+    note_id = "https://example.com/statuses/123"
+    assert ap.likes_url(note_id) == "https://example.com/statuses/123/likes"
+    assert ap.shares_url(note_id) == "https://example.com/statuses/123/shares"
+
+
+def test_note_likes_shares_urls():
+    """Test the likes_url and shares_url methods on Note objects."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+    }
+    note = ap.parse_activity(note_data)
+
+    # Test likes_url method
+    likes = note.likes_url()
+    assert likes == "https://example.com/note/1/likes"
+
+    # Test shares_url method
+    shares = note.shares_url()
+    assert shares == "https://example.com/note/1/shares"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_build_likes_collection():
+    """Test building a likes collection for an object."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+    }
+    note = ap.parse_activity(note_data)
+
+    # Build likes collection with count
+    likes = note.build_likes_collection(count=42)
+    assert isinstance(likes, ap.OrderedCollection)
+    assert likes.id == "https://example.com/note/1/likes"
+    assert likes.totalItems == 42
+
+    # Build likes collection with first page
+    likes_with_page = note.build_likes_collection(
+        count=100, first_page="https://example.com/note/1/likes?page=1"
+    )
+    assert likes_with_page.id == "https://example.com/note/1/likes"
+    assert likes_with_page.totalItems == 100
+    assert likes_with_page.first == "https://example.com/note/1/likes?page=1"
+
+    # Build likes collection without count
+    likes_no_count = note.build_likes_collection()
+    assert likes_no_count.id == "https://example.com/note/1/likes"
+    assert likes_no_count.totalItems is None
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_build_shares_collection():
+    """Test building a shares collection for an object."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+    }
+    note = ap.parse_activity(note_data)
+
+    # Build shares collection with count
+    shares = note.build_shares_collection(count=15)
+    assert isinstance(shares, ap.OrderedCollection)
+    assert shares.id == "https://example.com/note/1/shares"
+    assert shares.totalItems == 15
+
+    # Build shares collection with first page
+    shares_with_page = note.build_shares_collection(
+        count=50, first_page="https://example.com/note/1/shares?page=1"
+    )
+    assert shares_with_page.id == "https://example.com/note/1/shares"
+    assert shares_with_page.totalItems == 50
+    assert shares_with_page.first == "https://example.com/note/1/shares?page=1"
+
+    # Build shares collection without count
+    shares_no_count = note.build_shares_collection()
+    assert shares_no_count.id == "https://example.com/note/1/shares"
+    assert shares_no_count.totalItems is None
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_likes_shares_on_other_create_types():
+    """Test that likes/shares work on other CREATE_TYPES objects."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    # Test on Article
+    article_data = {
+        "type": "Article",
+        "id": "https://example.com/article/1",
+        "content": "Test article",
+        "attributedTo": "https://example.com/person/1",
+    }
+    article = ap.parse_activity(article_data)
+    assert article.likes_url() == "https://example.com/article/1/likes"
+    assert article.shares_url() == "https://example.com/article/1/shares"
+
+    # Test on Video
+    video_data = {
+        "type": "Video",
+        "id": "https://example.com/video/1",
+        "content": "Test video",
+        "attributedTo": "https://example.com/person/1",
+    }
+    video = ap.parse_activity(video_data)
+    assert video.likes_url() == "https://example.com/video/1/likes"
+    assert video.shares_url() == "https://example.com/video/1/shares"
+
+    # Test on Audio
+    audio_data = {
+        "type": "Audio",
+        "id": "https://example.com/audio/1",
+        "content": "Test audio",
+        "attributedTo": "https://example.com/person/1",
+    }
+    audio = ap.parse_activity(audio_data)
+    assert audio.likes_url() == "https://example.com/audio/1/likes"
+    assert audio.shares_url() == "https://example.com/audio/1/shares"
+
+    # Restore backend
+    ap.use_backend(None)
+
+
+def test_likes_shares_collection_to_dict():
+    """Test serialization of likes/shares collections."""
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    back.FETCH_MOCK["https://example.com/person/1"] = {
+        "type": "Person",
+        "id": "https://example.com/person/1",
+        "name": "Test User",
+        "preferredUsername": "testuser",
+        "inbox": "https://example.com/person/1/inbox",
+        "outbox": "https://example.com/person/1/outbox",
+    }
+
+    note_data = {
+        "type": "Note",
+        "id": "https://example.com/note/1",
+        "content": "Test note",
+        "attributedTo": "https://example.com/person/1",
+    }
+    note = ap.parse_activity(note_data)
+
+    # Test likes collection to_dict
+    likes = note.build_likes_collection(count=10)
+    likes_dict = likes.to_dict()
+    assert likes_dict["type"] == "OrderedCollection"
+    assert likes_dict["id"] == "https://example.com/note/1/likes"
+    assert likes_dict["totalItems"] == 10
+
+    # Test shares collection to_dict
+    shares = note.build_shares_collection(count=5)
+    shares_dict = shares.to_dict()
+    assert shares_dict["type"] == "OrderedCollection"
+    assert shares_dict["id"] == "https://example.com/note/1/shares"
+    assert shares_dict["totalItems"] == 5
+
+    # Restore backend
+    ap.use_backend(None)

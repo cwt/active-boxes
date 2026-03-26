@@ -164,8 +164,8 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | Followers | [x] | Collection or OrderedCollection |
 | Following | [x] | Collection or OrderedCollection |
 | Liked | [ ] | Not explicitly on actors |
-| Likes (per-object) | [ ] | Not implemented |
-| Shares (per-object) | [ ] | Not implemented |
+| Likes (per-object) | [x] | Implemented via `build_likes_collection()` |
+| Shares (per-object) | [x] | Implemented via `build_shares_collection()` |
 | Featured | [-] | In context but no class |
 | Replies | [ ] | Not implemented |
 
@@ -262,7 +262,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 ### High Priority (Library Gaps - Should Implement)
 
 1. [x] **Extended Activities** - Flag, Move, Join, Leave, View, Listen, Read, Write, Travel, Arrive Implemented
-2. [ ] **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
+2. [x] **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
 3. [ ] **Featured Collection** - For profile pages (`toot:featured`)
 4. [ ] **Backward Pagination** - `prev` link support in collection pagination
 
@@ -300,7 +300,7 @@ The library handles:
 ### Low Priority / Nice to Have
 
 1. [x] **Extended Activities** - All implemented
-2. [ ] **per-object Likes/Shares** - Activity collections on objects
+2. [x] **per-object Likes/Shares** - Activity collections on objects
 3. [ ] **Replies Collection** - Threaded conversations
 4. [ ] **Replay Attack Prevention** - Verify Date header freshness
 5. [ ] **Origin Verification** - Verify activity origin

@@ -180,6 +180,9 @@ CREATE_TYPES = [
 
 COLLECTION_TYPES = [ActivityType.COLLECTION, ActivityType.ORDERED_COLLECTION]
 
+LIKES_SUFFIX = "/likes"
+SHARES_SUFFIX = "/shares"
+
 
 def parse_activity(
     payload: ObjectType, expected: ActivityType | None = None
@@ -1228,6 +1231,56 @@ class Note(BaseActivity):
     def get_in_reply_to(self) -> Optional[str]:
         return _get_id(self.inReplyTo)
 
+    def likes_url(self) -> str:
+        """Returns the URL for the likes collection of this object."""
+        return f"{self.id}{LIKES_SUFFIX}"
+
+    def shares_url(self) -> str:
+        """Returns the URL for the shares (announces) collection of this object."""
+        return f"{self.id}{SHARES_SUFFIX}"
+
+    def build_likes_collection(
+        self, count: int | None = None, first_page: str | None = None
+    ) -> "OrderedCollection":
+        """Builds an OrderedCollection representing the likes for this object.
+
+        Args:
+            count: Optional total count of likes (totalItems)
+            first_page: Optional URL to the first page of the collection
+
+        Returns:
+            An OrderedCollection containing Like activities for this object
+        """
+        kwargs: Dict[str, Any] = {
+            "id": self.likes_url(),
+        }
+        if count is not None:
+            kwargs["totalItems"] = count
+        if first_page is not None:
+            kwargs["first"] = first_page
+        return OrderedCollection(**kwargs)
+
+    def build_shares_collection(
+        self, count: int | None = None, first_page: str | None = None
+    ) -> "OrderedCollection":
+        """Builds an OrderedCollection representing the shares for this object.
+
+        Args:
+            count: Optional total count of shares (totalItems)
+            first_page: Optional URL to the first page of the collection
+
+        Returns:
+            An OrderedCollection containing Announce activities for this object
+        """
+        kwargs: Dict[str, Any] = {
+            "id": self.shares_url(),
+        }
+        if count is not None:
+            kwargs["totalItems"] = count
+        if first_page is not None:
+            kwargs["first"] = first_page
+        return OrderedCollection(**kwargs)
+
 
 class Question(Note):
     ACTIVITY_TYPE = ActivityType.QUESTION
@@ -1284,3 +1337,13 @@ def fetch_remote_activity(
     iri: str, expected: Optional[ActivityType] = None
 ) -> BaseActivity:
     return parse_activity(get_backend().fetch_iri(iri), expected=expected)
+
+
+def likes_url(obj_id: str) -> str:
+    """Generate the URL for the likes collection of an object."""
+    return f"{obj_id}{LIKES_SUFFIX}"
+
+
+def shares_url(obj_id: str) -> str:
+    """Generate the URL for the shares (announces) collection of an object."""
+    return f"{obj_id}{SHARES_SUFFIX}"
