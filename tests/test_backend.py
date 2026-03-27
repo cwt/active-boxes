@@ -28,7 +28,6 @@ class InMemBackend(Backend):
     FOLLOWERS: dict[str, list] = {}
     FOLLOWING: dict[str, list] = {}
 
-    # For tests purposes only
     _METHOD_CALLS: dict[str, list] = {}
 
     def called_methods(self, p: ap.Person) -> List[str]:
@@ -51,7 +50,7 @@ class InMemBackend(Backend):
                     f"args left unchecked for method {name} at step #{i}"
                 )
             for z, f in enumerate(funcs):
-                if len(calls[i][1]) < z + 2:  # XXX(tsileo): 0 will be self
+                if len(calls[i][1]) < z + 2:
                     raise ValueError(f"method {name} has no args at index {z}")
                 try:
                     f(calls[i][1][z + 1])
@@ -62,7 +61,7 @@ class InMemBackend(Backend):
         if len(asserts) < len(calls):
             raise ValueError(
                 f"expecting {len(calls)} assertion, only got {len(asserts)},"
-                f"leftover: {calls[len(asserts):]!r}"
+                f"leftover: {calls[len(asserts) :]!r}"
             )
 
         return calls
@@ -91,7 +90,20 @@ class InMemBackend(Backend):
             self._METHOD_CALLS[p.id] = []
             return p
 
+    async def fetch_iri_async(self, iri: str, **kwargs) -> ap.ObjectType:
+        """Async version for compatibility."""
+        return self._fetch_iri_sync(iri)
+
+    async def fetch_json_async(self, url: str, **kwargs) -> dict:
+        """Async fetch_json for webfinger support."""
+        return self.FETCH_MOCK.get(url, {})
+
     def fetch_iri(self, iri: str, **kwargs) -> ap.ObjectType:
+        """Sync fetch for in-memory backend."""
+        return self._fetch_iri_sync(iri)
+
+    def _fetch_iri_sync(self, iri: str) -> ap.ObjectType:
+        """Synchronous fetch implementation for in-memory backend."""
         match iri:
             case iri if iri.endswith("/followers"):
                 data = self.FOLLOWERS[iri.replace("/followers", "")]

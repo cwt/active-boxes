@@ -119,15 +119,15 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | followers | [x] |
 | liked | [-] Partial - not explicit on actors |
 
-#### Optional/Mastodon Extension - [-] Partial
+#### Optional/Mastodon Extension - [x] All Implemented
 
 | Property | Status | Notes |
 |----------|--------|-------|
 | preferredUsername | [x] |
 | endpoints | [-] | Only sharedInbox handled |
 | sharedInbox | [x] |
-| streams | [ ] |
-| manuallyApprovesFollowers | [-] | In context but not validated |
+| streams | [x] | `get_streams()`, `add_stream()` |
+| manuallyApprovesFollowers | [x] | `manually_approves_followers()`, `requires_follow_approval()` |
 | publicKey | [x] | Delegated to key.py |
 
 ---
@@ -143,17 +143,17 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | CollectionPage | [x] |
 | OrderedCollectionPage | [x] |
 
-### Collection Pagination - [-] Partial
+### Collection Pagination - [x] Implemented
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | first link | [x] | Followed automatically |
 | next link | [x] | Forward pagination |
-| prev link | [ ] | No backward pagination |
-| last link | [ ] | Not implemented |
-| partOf | [ ] | No validation |
-| totalItems | [ ] | Not tracked |
-| Recursion limit | [-] | Limited to 3 levels |
+| prev link | [x] | Backward pagination via `iterate_backward()` |
+| last link | [x] | Supported in `iterate_backward()` |
+| partOf | [x] | Validated via `validate_part_of()` |
+| totalItems | [x] | Tracked in CollectionPage |
+| Recursion limit | [x] | Configurable via `max_depth` |
 
 ### Special Collections
 
@@ -167,7 +167,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | Likes (per-object) | [x] | Implemented via `build_likes_collection()` |
 | Shares (per-object) | [x] | Implemented via `build_shares_collection()` |
 | Featured | [x] | Implemented via `build_featured_collection()` |
-| Replies | [ ] | Not implemented |
+| Replies | [x] | Implemented via `build_replies_collection()` |
 
 ---
 
@@ -183,6 +183,19 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 ---
 
+## AsyncIO Support - [x] Implemented
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Async Backend | [x] | `Backend` with async methods |
+| AsyncHTTPClient | [x] | `http_client.py` with aiohttp |
+| Async WebFinger | [x] | `webfinger_async()` |
+| Async HTTPSignatures | [x] | `verify_request_async()`, `sign_request_async()` |
+| Async Collection Parsing | [x] | `parse_collection_async()`, `CollectionPaginator` |
+| Sync Wrappers | [x] | Backwards compatible sync methods |
+
+---
+
 ## JSON-LD and Context - [x] Implemented
 
 | Feature | Status |
@@ -192,7 +205,7 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | Extension context | [x] |
 | JSON-LD serialization | [x] |
 | ActivityStreams 2.0 | [x] |
-| Content negotiation | [-] | application/activity+json only, no application/ld+json |
+| Content negotiation | [x] | `get_accept_header()`, `get_content_type_header()` support activity, ld+json, json, html |
 
 ---
 
@@ -215,9 +228,9 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | LD Signature | [x] | |
 | Input validation | [x] | |
 | Output sanitization | [x] | Via bleach |
-| Content security | [-] | Not explicit CSP headers |
+| Content security | [x] | `build_csp_header()`, `build_activity_headers()` |
 | Origin verification | [ ] | Not explicit |
-| Replay prevention | [-] | Date header exists but not verified |
+| Replay prevention | [x] | `verify_date_header()` for Date header freshness |
 | bto/bcc handling | [ ] | Not stripped from activities |
 
 ---
@@ -231,14 +244,17 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | base_url() | [x] (abstract - app implements) |
 | activity_url() | [x] (abstract - app implements) |
 | note_url() | [x] (abstract - app implements) |
-| fetch_iri() | [x] GET with redirects |
-| fetch_json() | [x] GET with JSON |
-| check_url() | [x] |
+| fetch_iri() / fetch_iri_async() | [x] GET with redirects |
+| fetch_json() / fetch_json_async() | [x] GET with JSON |
+| check_url() / check_url_async() | [x] |
 | user_agent() | [x] |
 | random_object_id() | [x] |
 | extra_inboxes() | [x] (hook for app to add recipients) |
 | is_from_outbox() | [x] |
-| parse_collection() | [x] |
+| parse_collection() / parse_collection_async() | [x] |
+| get_first_page() | [x] CollectionPaginator |
+| iterate_forward() | [x] CollectionPaginator |
+| iterate_backward() | [x] CollectionPaginator |
 
 ### App Must Implement (via `ActivityPubPlugin` Protocol)
 
@@ -264,7 +280,13 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 1. [x] **Extended Activities** - Flag, Move, Join, Leave, View, Listen, Read, Write, Travel, Arrive Implemented
 2. [x] **Per-object Likes/Shares collections** - Library helpers for `Likes` and `Shares` collections
 3. [x] **Featured Collection** - For profile pages (`toot:featured`)
-4. [ ] **Backward Pagination** - `prev` link support in collection pagination
+4. [x] **Backward Pagination** - `prev` link support via `iterate_backward()`
+5. [x] **streams Property** - `get_streams()`, `add_stream()` on Person
+6. [x] **manuallyApprovesFollowers** - `manually_approves_followers()`, `requires_follow_approval()` on Person
+7. [x] **Replies Collection** - `build_replies_collection()` helper
+8. [x] **Content Security Policy** - `build_csp_header()`, `build_activity_headers()`
+9. [x] **Replay Attack Prevention** - `verify_date_header()` for Date header freshness
+10. [x] **AsyncIO Support** - Full async implementation with aiohttp
 
 ### High Priority (App Responsibility - See `DeliveryPlugin` Protocol)
 
@@ -286,24 +308,16 @@ The library handles:
 
 1. **Retry Logic** - App responsibility (queue/retry policy)
 2. **bto/bcc Handling** - Library strips from output, app should respect
-3. **Replay Attack Prevention** - App responsibility (verify Date header freshness)
-4. **Origin Verification** - App responsibility (via `verify_origin()` hook)
-
-### Medium Priority
-
-1. **Retry Logic** - Exponential backoff for failed deliveries
-2. **Backward Pagination** - Support prev link in collections
-3. **bto/bcc Handling** - Strip before delivery per spec
-4. **streams Property** - Supplementary collections
+3. **Origin Verification** - App responsibility (via `verify_origin()` hook)
 
 ### Low Priority / Nice to Have
 
 1. [x] **Extended Activities** - All implemented
 2. [x] **per-object Likes/Shares** - Activity collections on objects
-3. [ ] **Replies Collection** - Threaded conversations
-4. [ ] **Replay Attack Prevention** - Verify Date header freshness
+3. [x] **Replies Collection** - Threaded conversations
+4. [x] **Replay Attack Prevention** - Verify Date header freshness
 5. [ ] **Origin Verification** - Verify activity origin
-6. [ ] **Content Security Policy** - Explicit CSP headers
+6. [x] **Content Security Policy** - Explicit CSP headers
 
 ---
 

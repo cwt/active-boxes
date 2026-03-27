@@ -171,11 +171,12 @@ def test_verify_h():
     # Let's just test that the function doesn't crash.
 
 
-@mock.patch("active_boxes.httpsig.get_backend")
-def test_get_public_key_key_type(mock_get_backend):
-    # Test with Key type object
+def test_get_public_key_key_type():
+    import active_boxes.activitypub as ap
+
     back = InMemBackend()
-    mock_get_backend.return_value = back
+    original_backend = ap.BACKEND
+    ap.BACKEND = back
 
     back.FETCH_MOCK["https://example.com/key"] = {
         "type": "Key",
@@ -184,21 +185,21 @@ def test_get_public_key_key_type(mock_get_backend):
         "id": "https://example.com/key",
     }
 
-    # This should not raise an exception
     try:
         k = httpsig._get_public_key("https://example.com/key")
-        # If we get here, the function worked
         assert k is not None
     except ValueError:
-        # Expected if the key format is invalid, but the function was called correctly
         pass
+    finally:
+        ap.BACKEND = original_backend
 
 
-@mock.patch("active_boxes.httpsig.get_backend")
-def test_get_public_key_person_type(mock_get_backend):
-    # Test with Person type object containing publicKey
+def test_get_public_key_person_type():
+    import active_boxes.activitypub as ap
+
     back = InMemBackend()
-    mock_get_backend.return_value = back
+    original_backend = ap.BACKEND
+    ap.BACKEND = back
 
     back.FETCH_MOCK["https://example.com/person"] = {
         "publicKey": {
@@ -208,39 +209,39 @@ def test_get_public_key_person_type(mock_get_backend):
         "id": "https://example.com/person",
     }
 
-    # This should not raise an exception
     try:
         k = httpsig._get_public_key("https://example.com/person")
-        # If we get here, the function worked
         assert k is not None
     except ValueError:
-        # Expected if the key format is invalid, but the function was called correctly
         pass
+    finally:
+        ap.BACKEND = original_backend
 
 
-@mock.patch("active_boxes.httpsig.get_backend")
-def test_get_public_key_wrong_key_id(mock_get_backend):
-    # Test with mismatched key ID
+def test_get_public_key_wrong_key_id():
+    import active_boxes.activitypub as ap
+
     back = InMemBackend()
-    mock_get_backend.return_value = back
+    original_backend = ap.BACKEND
+    ap.BACKEND = back
 
     back.FETCH_MOCK["https://example.com/wrong-key"] = {
         "publicKey": {
-            "id": "https://example.com/person#key",  # Different ID than requested
+            "id": "https://example.com/person#key",
             "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----",
         },
         "id": "https://example.com/person",
     }
 
-    # This should raise a ValueError for mismatched key ID
-    with pytest.raises(ValueError):
-        httpsig._get_public_key("https://example.com/wrong-key")
+    try:
+        with pytest.raises(ValueError):
+            httpsig._get_public_key("https://example.com/wrong-key")
+    finally:
+        ap.BACKEND = original_backend
 
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
-@mock.patch("active_boxes.httpsig.get_backend")
-def test_verify_request_no_signature(mock_get_backend, mock_parse_sig_header):
-    # Test when no signature header is present
+def test_verify_request_no_signature(mock_parse_sig_header):
     mock_parse_sig_header.return_value = None
 
     result = httpsig.verify_request("GET", "/test", {"Signature": None}, "")
@@ -249,24 +250,21 @@ def test_verify_request_no_signature(mock_get_backend, mock_parse_sig_header):
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig._get_public_key_async")
 @mock.patch("active_boxes.httpsig._verify_h")
-@mock.patch("active_boxes.httpsig.get_backend")
 def test_verify_request_success(
-    mock_get_backend,
     mock_verify_h,
-    mock_get_public_key,
+    mock_get_public_key_async,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
-    # Test successful verification
     mock_parse_sig_header.return_value = {
         "keyId": "https://example.com/key",
         "headers": "(request-target) host date",
-        "signature": "SGVsbG8gV29ybGQh",  # "Hello World!" base64 encoded
+        "signature": "SGVsbG8gV29ybGQh",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.return_value = mock.Mock()
+    mock_get_public_key_async.return_value = mock.Mock()
     mock_verify_h.return_value = True
 
     result = httpsig.verify_request("GET", "/test", {"Signature": "dummy"}, b"")
@@ -275,22 +273,19 @@ def test_verify_request_success(
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
-@mock.patch("active_boxes.httpsig.get_backend")
+@mock.patch("active_boxes.httpsig._get_public_key_async")
 def test_verify_request_activity_gone_error(
-    mock_get_backend,
-    mock_get_public_key,
+    mock_get_public_key_async,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
-    # Test when ActivityGoneError is raised
     mock_parse_sig_header.return_value = {
         "keyId": "https://example.com/key",
         "headers": "(request-target) host date",
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.side_effect = ActivityGoneError("Gone")
+    mock_get_public_key_async.side_effect = ActivityGoneError("Gone")
 
     result = httpsig.verify_request("GET", "/test", {"Signature": "dummy"}, b"")
     assert result is False
@@ -298,85 +293,62 @@ def test_verify_request_activity_gone_error(
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
-@mock.patch("active_boxes.httpsig.get_backend")
+@mock.patch("active_boxes.httpsig._get_public_key_async")
 def test_verify_request_activity_not_found_error(
-    mock_get_backend,
-    mock_get_public_key,
+    mock_get_public_key_async,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
-    # Test when ActivityNotFoundError is raised
     mock_parse_sig_header.return_value = {
         "keyId": "https://example.com/key",
         "headers": "(request-target) host date",
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.side_effect = ActivityNotFoundError("Not found")
+    mock_get_public_key_async.side_effect = ActivityNotFoundError("Not found")
 
     result = httpsig.verify_request("GET", "/test", {"Signature": "dummy"}, b"")
     assert result is False
 
 
 def test_httpsig_auth_call():
-    # Test the HTTPSigAuth.__call__ method
     k = Key("https://example.com", "https://example.com#key")
     k.new()
 
     auth = httpsig.HTTPSigAuth(k)
 
-    # Create a mock request
-    mock_request = mock.Mock()
-    mock_request.url = "https://example.com/test"
-    mock_request.method = "POST"
-    mock_request.path_url = "/test"
-    mock_request.headers = {
+    headers = {
         "user-agent": "test-agent",
         "host": "example.com",
-        "date": "Tue, 09 Sep 2025 00:00:00 GMT",
         "content-type": "application/json",
     }
-    mock_request.body = b'{"test": "data"}'
 
-    # Call the auth function
-    result = auth(mock_request)
+    result = auth("POST", "/test", headers, b'{"test": "data"}')
 
-    # Check that headers were added
-    assert "Digest" in result.headers
-    assert "Date" in result.headers
-    assert "Host" in result.headers
-    assert "Signature" in result.headers
+    assert "Digest" in result
+    assert "Date" in result
+    assert "Host" in result
+    assert "Signature" in result
 
 
 def test_httpsig_auth_call_with_string_body():
-    # Test the HTTPSigAuth.__call__ method with string body
     k = Key("https://example.com", "https://example.com#key")
     k.new()
 
     auth = httpsig.HTTPSigAuth(k)
 
-    # Create a mock request with string body
-    mock_request = mock.Mock()
-    mock_request.url = "https://example.com/test"
-    mock_request.method = "POST"
-    mock_request.path_url = "/test"
-    mock_request.headers = {
+    headers = {
         "user-agent": "test-agent",
         "host": "example.com",
-        "date": "Tue, 09 Sep 2025 00:00:00 GMT",
         "content-type": "application/json",
     }
-    mock_request.body = '{"test": "data"}'
 
-    # Call the auth function
-    result = auth(mock_request)
+    result = auth("POST", "/test", headers, '{"test": "data"}')
 
-    # Check that headers were added
-    assert "Digest" in result.headers
-    assert "Date" in result.headers
-    assert "Host" in result.headers
-    assert "Signature" in result.headers
+    assert "Digest" in result
+    assert "Date" in result
+    assert "Host" in result
+    assert "Signature" in result
 
 
 def test_key_new_load():

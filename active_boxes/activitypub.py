@@ -1,5 +1,6 @@
 """Core ActivityPub classes."""
 
+import asyncio
 import logging
 import weakref
 from datetime import datetime
@@ -75,6 +76,60 @@ def _ensure_backend():
 def use_backend(backend_instance):
     global BACKEND
     BACKEND = backend_instance
+
+
+async def get_backend_async() -> Backend:
+    """Get the async backend instance."""
+    if BACKEND is None:
+        raise UninitializedBackendError
+    return BACKEND
+
+
+async def fetch_iri_async(iri: str, **kwargs) -> ObjectType:
+    """Async version of backend.fetch_iri."""
+    backend = await get_backend_async()
+    result = backend.fetch_iri(iri, **kwargs)
+    return await _maybe_await(result)
+
+
+async def fetch_json_async(url: str, **kwargs) -> Dict[str, Any]:
+    """Async version of backend.fetch_json."""
+    backend = await get_backend_async()
+    result = backend.fetch_json(url, **kwargs)
+    return await _maybe_await(result)
+
+
+async def _maybe_await(result):
+    """Await a result if it's a coroutine, otherwise return it directly.
+
+    This allows supporting both sync and async backend methods.
+
+    Args:
+        result: Either a coroutine or a direct value
+
+    Returns:
+        The resolved value
+    """
+    if asyncio.iscoroutine(result):
+        return await result
+    return result
+
+
+def _run_async(coro):
+    """Run an async coroutine from sync code.
+
+    This is for backwards compatibility. Apps should use async code.
+    """
+    if asyncio.iscoroutine(coro):
+        try:
+            asyncio.get_running_loop()
+            raise RuntimeError(
+                "Cannot run async code from within an async context. "
+                "Use 'await' instead of _run_async()."
+            )
+        except RuntimeError:
+            return asyncio.run(coro)
+    return coro
 
 
 def format_datetime(dt: datetime) -> str:
@@ -183,6 +238,7 @@ COLLECTION_TYPES = [ActivityType.COLLECTION, ActivityType.ORDERED_COLLECTION]
 LIKES_SUFFIX = "/likes"
 SHARES_SUFFIX = "/shares"
 FEATURED_SUFFIX = "/featured"
+REPLIES_SUFFIX = "/replies"
 
 
 def parse_activity(
@@ -539,17 +595,18 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         else:
             raise ValueError("invalid object")
 
-    def get_object(self) -> "BaseActivity":
-        """Returns the object as a BaseActivity instance."""
+    async def get_object_async(self) -> "BaseActivity":
+        """Async version: Returns the object as a BaseActivity instance."""
         _ensure_backend()
-        backend = get_backend()
+        backend = await get_backend_async()
 
         if self.__obj:
             return self.__obj
         if isinstance(self._data["object"], dict):
             p = parse_activity(self._data["object"])
         else:
-            obj = backend.fetch_iri(self._data["object"])
+            result = backend.fetch_iri(self._data["object"])
+            obj = await _maybe_await(result)
             if ActivityType(obj.get("type")) not in self.ALLOWED_OBJECT_TYPES:
                 raise UnexpectedActivityTypeError(
                     f"invalid object type {obj.get('type')!r}"
@@ -558,6 +615,13 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         self.__obj = p
         return p
+
+    def get_object(self) -> "BaseActivity":
+        """Returns the object as a BaseActivity instance (sync wrapper).
+
+        For async code, use await get_object_async() instead.
+        """
+        return _run_async(self.get_object_async())
 
     def get_target(self) -> str:
         """Returns the target as an IRI string."""
@@ -597,16 +661,16 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         return data
 
-    def get_actor(self) -> ActorType:
+    async def get_actor_async(self) -> ActorType:
+        """Async version: Returns the actor for this activity."""
         _ensure_backend()
-        backend = get_backend()
+        backend = await get_backend_async()
 
         if self.__actor:
             return self.__actor[0]
 
         actor = self._data.get("actor")
         if not actor and self.ACTOR_REQUIRED:
-            # Quick hack for Note objects
             if self.ACTIVITY_TYPE in CREATE_TYPES:
                 actor = self._data.get("attributedTo")
                 if not actor:
@@ -621,12 +685,21 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
             actor_id = self._actor_id(item)
 
-            p = parse_activity(backend.fetch_iri(actor_id))
+            result = backend.fetch_iri(actor_id)
+            actor_obj = await _maybe_await(result)
+            p = parse_activity(actor_obj)
             if not p.has_type(ACTOR_TYPES):  # type: ignore
                 raise UnexpectedActivityTypeError(f"{p!r} is not an actor")
             self.__actor.append(p)  # type: ignore
 
         return self.__actor[0]
+
+    def get_actor(self) -> ActorType:
+        """Returns the actor for this activity (sync wrapper).
+
+        For async code, use await get_actor_async() instead.
+        """
+        return _run_async(self.get_actor_async())
 
     def _recipients(self) -> List[str]:
         return []
@@ -740,6 +813,47 @@ class Person(BaseActivity):
         if first_page is not None:
             kwargs["first"] = first_page
         return OrderedCollection(**kwargs)
+
+    def get_streams(self) -> List[str]:
+        """Returns the streams (supplementary collections) for this actor.
+
+        The streams property contains a list of Collection URLs that are
+        owned by this actor but not part of the standard outbox/following/etc.
+
+        Returns:
+            List of stream collection URLs
+        """
+        return _to_list(self.streams) if self.streams else []
+
+    def add_stream(self, stream_url: str) -> None:
+        """Add a stream URL to this actor's streams property.
+
+        Args:
+            stream_url: URL of the stream collection to add
+        """
+        if self.streams is None:
+            self._data["streams"] = []
+        elif not isinstance(self.streams, list):
+            self._data["streams"] = [self.streams]
+        self._data["streams"].append(stream_url)
+
+    def manually_approves_followers(self) -> bool:
+        """Returns True if this actor manually approves follow requests.
+
+        Returns:
+            True if follow requests need approval, False otherwise
+        """
+        return bool(self.manuallyApprovesFollowers)
+
+    def requires_follow_approval(self) -> bool:
+        """Returns True if incoming follow requests require approval.
+
+        This is an alias for manually_approves_followers() for clarity.
+
+        Returns:
+            True if follow requests need approval
+        """
+        return self.manually_approves_followers()
 
 
 class Service(Person):
@@ -891,23 +1005,28 @@ class Delete(BaseActivity):
     ALLOWED_OBJECT_TYPES = CREATE_TYPES + ACTOR_TYPES + [ActivityType.TOMBSTONE]
     OBJECT_REQUIRED = True
 
-    def _get_actual_object(self) -> BaseActivity:
+    async def _get_actual_object_async(self) -> BaseActivity:
+        """Async version: Get the actual object being deleted."""
         _ensure_backend()
-        backend = get_backend()
+        backend = await get_backend_async()
 
-        # XXX(tsileo): overrides get_object instead?
-        obj = self.get_object()
+        obj = await self.get_object_async()
         if (
             obj.id.startswith(backend.base_url())
             and obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE
         ):
-            obj = parse_activity(backend.fetch_iri(obj.id))
+            result = backend.fetch_iri(obj.id)
+            obj = parse_activity(await _maybe_await(result))
         if obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE:
-            # If we already received it, we may be able to get a copy
-            better_obj = backend.fetch_iri(obj.id)
+            result = backend.fetch_iri(obj.id)
+            better_obj = await _maybe_await(result)
             if better_obj:
                 return parse_activity(better_obj)
         return obj
+
+    def _get_actual_object(self) -> BaseActivity:
+        """Get the actual object being deleted (sync wrapper)."""
+        return _run_async(self._get_actual_object_async())
 
     def _recipients(self) -> List[str]:
         obj = self._get_actual_object()
@@ -1307,6 +1426,34 @@ class Note(BaseActivity):
             kwargs["first"] = first_page
         return OrderedCollection(**kwargs)
 
+    def replies_url(self) -> str:
+        """Returns the URL for the replies collection of this object."""
+        return f"{self.id}{REPLIES_SUFFIX}"
+
+    def build_replies_collection(
+        self, count: int | None = None, first_page: str | None = None
+    ) -> "OrderedCollection":
+        """Builds an OrderedCollection representing the replies to this object.
+
+        The replies collection contains objects (typically Notes) that are
+        replies to this object, organized as a Collection.
+
+        Args:
+            count: Optional total count of replies (totalItems)
+            first_page: Optional URL to the first page of the collection
+
+        Returns:
+            An OrderedCollection containing reply objects
+        """
+        kwargs: Dict[str, Any] = {
+            "id": self.replies_url(),
+        }
+        if count is not None:
+            kwargs["totalItems"] = count
+        if first_page is not None:
+            kwargs["first"] = first_page
+        return OrderedCollection(**kwargs)
+
 
 class Question(Note):
     ACTIVITY_TYPE = ActivityType.QUESTION
@@ -1359,10 +1506,24 @@ class OrderedCollectionPage(BaseActivity):
     ACTOR_REQUIRED = False
 
 
+async def fetch_remote_activity_async(
+    iri: str, expected: Optional[ActivityType] = None
+) -> BaseActivity:
+    """Async version: Fetch and parse a remote activity."""
+    backend = await get_backend_async()
+    result = backend.fetch_iri(iri)
+    obj = await _maybe_await(result)
+    return parse_activity(obj, expected=expected)
+
+
 def fetch_remote_activity(
     iri: str, expected: Optional[ActivityType] = None
 ) -> BaseActivity:
-    return parse_activity(get_backend().fetch_iri(iri), expected=expected)
+    """Fetch and parse a remote activity (sync wrapper).
+
+    For async code, use await fetch_remote_activity_async() instead.
+    """
+    return _run_async(fetch_remote_activity_async(iri, expected))
 
 
 def likes_url(obj_id: str) -> str:
@@ -1378,3 +1539,8 @@ def shares_url(obj_id: str) -> str:
 def featured_url(actor_id: str) -> str:
     """Generate the URL for the featured collection of an actor."""
     return f"{actor_id}{FEATURED_SUFFIX}"
+
+
+def replies_url(obj_id: str) -> str:
+    """Generate the URL for the replies collection of an object."""
+    return f"{obj_id}{REPLIES_SUFFIX}"

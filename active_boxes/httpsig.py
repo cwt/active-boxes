@@ -1,35 +1,41 @@
-"""Implements HTTP signature for Flask requests.
+"""HTTP Signatures for ActivityPub.
 
-Mastodon instances won't accept requests that are not signed using this scheme.
+This module implements HTTP Signatures (RFC draft-cavage-http-signatures)
+which is required by ActivityPub for server-to-server communication.
 
+Mastodon and other Fediverse instances won't accept unsigned requests.
 """
 
+import asyncio
 import base64
 import hashlib
 import logging
 from datetime import datetime
 from datetime import timezone
-from typing import Any
-from typing import Dict
-from typing import Optional
+from typing import Dict, Optional, Union
 from urllib.parse import urlparse
 
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
-from requests.auth import AuthBase
 
-from .activitypub import get_backend
 from .activitypub import _has_type
-from .errors import ActivityNotFoundError
+from .activitypub import _maybe_await
+from .activitypub import get_backend_async
 from .errors import ActivityGoneError
+from .errors import ActivityNotFoundError
 from .key import Key
 
 logger = logging.getLogger(__name__)
 
 
 def _build_signed_string(
-    signed_headers: str, method: str, path: str, headers: Any, body_digest: str
+    signed_headers: str,
+    method: str,
+    path: str,
+    headers: Dict[str, str],
+    body_digest: str,
 ) -> str:
+    """Build the string to be signed."""
     out = []
     for signed_header in signed_headers.split(" "):
         if signed_header == "(request-target)":
@@ -37,35 +43,52 @@ def _build_signed_string(
         elif signed_header == "digest":
             out.append("digest: " + body_digest)
         else:
-            out.append(signed_header + ": " + headers[signed_header])
+            out.append(signed_header + ": " + headers.get(signed_header, ""))
     return "\n".join(out)
 
 
 def _parse_sig_header(val: Optional[str]) -> Optional[Dict[str, str]]:
+    """Parse the Signature header value."""
     if not val:
         return None
     out = {}
     for data in val.split(","):
         k, v = data.split("=", 1)
-        out[k] = v[1 : len(v) - 1]  # noqa: black conflict
+        out[k] = v[1 : len(v) - 1]
     return out
 
 
-def _verify_h(signed_string, signature, pubkey):
+def _verify_h(signed_string: str, signature: bytes, pubkey) -> bool:
+    """Verify a signature using a public key."""
     signer = PKCS1_v1_5.new(pubkey)
     digest = SHA256.new()
     digest.update(signed_string.encode("utf-8"))
     return signer.verify(digest, signature)
 
 
-def _body_digest(body: str) -> str:
-    h = hashlib.new("sha256")
-    h.update(body)  # type: ignore
+def _body_digest(body: Union[str, bytes]) -> str:
+    """Compute the SHA-256 digest of a body.
+
+    Args:
+        body: The request body as string or bytes
+
+    Returns:
+        Digest header value (RFC 3230 format)
+    """
+    h = hashlib.sha256()
+    if isinstance(body, bytes):
+        h.update(body)
+    else:
+        h.update(body.encode("utf-8"))
     return "SHA-256=" + base64.b64encode(h.digest()).decode("utf-8")
 
 
-def _get_public_key(key_id: str) -> Key:
-    actor = get_backend().fetch_iri(key_id)
+async def _get_public_key_async(key_id: str) -> Key:
+    """Async: Fetch and parse a public key by key ID."""
+    backend = await get_backend_async()
+    result = backend.fetch_iri(key_id)
+    actor = await _maybe_await(result)
+
     match actor:
         case {
             "type": actor_type,
@@ -73,7 +96,6 @@ def _get_public_key(key_id: str) -> Key:
             "owner": owner,
             "id": actor_id,
         } if _has_type(actor_type, "Key"):
-            # The Key is not embedded in the Person
             k = Key(owner, actor_id)
             k.load_pub(public_key_pem)
         case {
@@ -85,7 +107,6 @@ def _get_public_key(key_id: str) -> Key:
         case _:
             raise ValueError(f"unexpected actor structure: {actor!r}")
 
-    # Ensure the right key was fetch
     if key_id != k.key_id():
         raise ValueError(
             f"failed to fetch requested key {key_id}: got {actor['publicKey']['id']}"
@@ -94,17 +115,30 @@ def _get_public_key(key_id: str) -> Key:
     return k
 
 
-def verify_request(method: str, path: str, headers: Any, body: str) -> bool:
+def _get_public_key(key_id: str) -> Key:
+    """Fetch and parse a public key by key ID (sync wrapper)."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_get_public_key_async(key_id))
+
+    return loop.run_until_complete(_get_public_key_async(key_id))
+
+
+async def verify_request_async(
+    method: str, path: str, headers: Dict[str, str], body: str
+) -> bool:
+    """Async: Verify an HTTP Signature on a request."""
     if not (hsig := _parse_sig_header(headers.get("Signature"))):
         logger.debug("no signature in header")
         return False
-    logger.debug(f"hsig={hsig}")
+
     signed_string = _build_signed_string(
         hsig["headers"], method, path, headers, _body_digest(body)
     )
 
     try:
-        k = _get_public_key(hsig["keyId"])
+        k = await _get_public_key_async(hsig["keyId"])
     except (ActivityGoneError, ActivityNotFoundError):
         logger.debug("cannot get public key")
         return False
@@ -114,46 +148,119 @@ def verify_request(method: str, path: str, headers: Any, body: str) -> bool:
     )
 
 
-class HTTPSigAuth(AuthBase):
-    """Requests auth plugin for signing requests on the fly."""
+def verify_request(
+    method: str, path: str, headers: Dict[str, str], body: str
+) -> bool:
+    """Verify an HTTP Signature on a request (sync wrapper)."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(verify_request_async(method, path, headers, body))
+
+    return loop.run_until_complete(
+        verify_request_async(method, path, headers, body)
+    )
+
+
+async def sign_request_async(
+    method: str,
+    path: str,
+    headers: Dict[str, str],
+    key: Key,
+    body: Optional[str] = None,
+    host: Optional[str] = None,
+) -> Dict[str, str]:
+    """Async: Sign a request with HTTP Signatures."""
+    logger.info(f"keyid={key.key_id()}")
+
+    if host is None:
+        parsed = urlparse(path if "://" in path else f"http://localhost{path}")
+        host = parsed.netloc
+
+    body_digest = _body_digest(body) if body else ""
+
+    date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    headers["Digest"] = body_digest
+    headers["Date"] = date
+    headers["Host"] = host
+
+    sigheaders = "(request-target) user-agent host date digest content-type"
+
+    to_be_signed = _build_signed_string(
+        sigheaders, method, path, headers, body_digest
+    )
+    assert key.privkey is not None, "Private key is required for signing"
+    signer = PKCS1_v1_5.new(key.privkey)
+    digest = SHA256.new()
+    digest.update(to_be_signed.encode("utf-8"))
+    sig = base64.b64encode(signer.sign(digest)).decode("utf-8")
+
+    key_id = key.key_id()
+    signature_header = f'keyId="{key_id}",algorithm="rsa-sha256",headers="{sigheaders}",signature="{sig}"'
+    logger.debug(f"signature header={signature_header}")
+
+    headers["Signature"] = signature_header
+    return headers
+
+
+def sign_request(
+    method: str,
+    path: str,
+    headers: Dict[str, str],
+    key: Key,
+    body: Optional[str] = None,
+    host: Optional[str] = None,
+) -> Dict[str, str]:
+    """Sign a request with HTTP Signatures (sync wrapper)."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(
+            sign_request_async(method, path, headers, key, body, host)
+        )
+
+    return loop.run_until_complete(
+        sign_request_async(method, path, headers, key, body, host)
+    )
+
+
+class HTTPSigAuth:
+    """Async HTTP Signature authentication for aiohttp.
+
+    Use this class to sign outgoing requests with HTTP Signatures.
+    """
 
     def __init__(self, key: Key) -> None:
+        """Initialize with a key."""
         self.key = key
 
-    def __call__(self, r):
-        logger.info(f"keyid={self.key.key_id()}")
-        host = urlparse(r.url).netloc
+    def __call__(
+        self,
+        method: str,
+        path: str,
+        headers: Dict[str, str],
+        body: Optional[str] = None,
+    ) -> Dict[str, str]:
+        """Sign a request (sync interface for backwards compatibility)."""
+        return sign_request(method, path, headers, self.key, body)
 
-        bh = hashlib.new("sha256")
-        body = r.body
-        try:
-            body = r.body.encode("utf-8")
-        except AttributeError:
-            pass
-        bh.update(body)
-        bodydigest = "SHA-256=" + base64.b64encode(bh.digest()).decode("utf-8")
+    async def sign_async(
+        self,
+        method: str,
+        path: str,
+        headers: Dict[str, str],
+        body: Optional[str] = None,
+    ) -> Dict[str, str]:
+        """Sign a request (async interface)."""
+        return await sign_request_async(method, path, headers, self.key, body)
 
-        date = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-
-        r.headers.update({"Digest": bodydigest, "Date": date, "Host": host})
-
-        sigheaders = "(request-target) user-agent host date digest content-type"
-
-        to_be_signed = _build_signed_string(
-            sigheaders, r.method, r.path_url, r.headers, bodydigest
-        )
-        signer = PKCS1_v1_5.new(self.key.privkey)
-        digest = SHA256.new()
-        digest.update(to_be_signed.encode("utf-8"))
-        sig = base64.b64encode(signer.sign(digest))
-        sig = sig.decode("utf-8")
-
-        key_id = self.key.key_id()
-        headers = {
-            "Signature": f'keyId="{key_id}",algorithm="rsa-sha256",headers="{sigheaders}",signature="{sig}"'
-        }
-        logger.debug(f"signed request headers={headers}")
-
-        r.headers.update(headers)
-
-        return r
+    async def sign(
+        self,
+        method: str,
+        path: str,
+        headers: Dict[str, str],
+        body: Optional[str] = None,
+    ) -> Dict[str, str]:
+        """Sign a request (async interface)."""
+        return await sign_request_async(method, path, headers, self.key, body)

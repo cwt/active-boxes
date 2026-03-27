@@ -38,15 +38,10 @@ _WEBFINGER_RESP = {
 @mock.patch("active_boxes.backend.check_url", return_value=None)
 @mock.patch("active_boxes.backend.Backend.fetch_json")
 def test_webfinger(mock_fetch_json, _, _1):
-    # Initialize backend
     back = InMemBackend()
     use_backend(back)
 
-    # Mock the fetch_json method to return our test response
-    mock_response = mock.Mock()
-    mock_response.json.return_value = _WEBFINGER_RESP
-    mock_response.raise_for_status.return_value = None
-    mock_fetch_json.return_value = mock_response
+    mock_fetch_json.return_value = _WEBFINGER_RESP
 
     if data := webfinger.webfinger("@dev@microblog.pub"):
         assert data == _WEBFINGER_RESP
@@ -70,17 +65,11 @@ def test_webfinger_invalid_url():
 @mock.patch("active_boxes.backend.check_url", return_value=None)
 @mock.patch("active_boxes.backend.Backend.fetch_json")
 def test_webfinger_with_http_url(mock_fetch_json, _, _1):
-    # Initialize backend
     back = InMemBackend()
     use_backend(back)
 
-    # Mock the fetch_json method to return our test response
-    mock_response = mock.Mock()
-    mock_response.json.return_value = _WEBFINGER_RESP
-    mock_response.raise_for_status.return_value = None
-    mock_fetch_json.return_value = mock_response
+    mock_fetch_json.return_value = _WEBFINGER_RESP
 
-    # Test with HTTP URL
     data = webfinger.webfinger("http://dev@microblog.pub")
     assert data == _WEBFINGER_RESP
 
@@ -89,17 +78,11 @@ def test_webfinger_with_http_url(mock_fetch_json, _, _1):
 @mock.patch("active_boxes.backend.check_url", return_value=None)
 @mock.patch("active_boxes.backend.Backend.fetch_json")
 def test_webfinger_with_acct_uri(mock_fetch_json, _, _1):
-    # Initialize backend
     back = InMemBackend()
     use_backend(back)
 
-    # Mock the fetch_json method to return our test response
-    mock_response = mock.Mock()
-    mock_response.json.return_value = _WEBFINGER_RESP
-    mock_response.raise_for_status.return_value = None
-    mock_fetch_json.return_value = mock_response
+    mock_fetch_json.return_value = _WEBFINGER_RESP
 
-    # Test with acct URI
     data = webfinger.webfinger("acct:dev@microblog.pub")
     assert data == _WEBFINGER_RESP
 
@@ -108,14 +91,11 @@ def test_webfinger_with_acct_uri(mock_fetch_json, _, _1):
 @mock.patch("active_boxes.backend.check_url", return_value=None)
 @mock.patch("active_boxes.backend.Backend.fetch_json")
 def test_webfinger_connection_error(mock_fetch_json, _, _1):
-    # Initialize backend
     back = InMemBackend()
     use_backend(back)
 
-    # Mock the fetch_json method to raise ConnectionError
     mock_fetch_json.side_effect = requests.ConnectionError("Connection failed")
 
-    # Test with connection error
     data = webfinger.webfinger("@dev@microblog.pub")
     assert data is None
 
@@ -124,17 +104,11 @@ def test_webfinger_connection_error(mock_fetch_json, _, _1):
 @mock.patch("active_boxes.backend.check_url", return_value=None)
 @mock.patch("active_boxes.backend.Backend.fetch_json")
 def test_get_actor_url(mock_fetch_json, _, _1):
-    # Initialize backend
     back = InMemBackend()
     use_backend(back)
 
-    # Mock the fetch_json method to return our test response
-    mock_response = mock.Mock()
-    mock_response.json.return_value = _WEBFINGER_RESP
-    mock_response.raise_for_status.return_value = None
-    mock_fetch_json.return_value = mock_response
+    mock_fetch_json.return_value = _WEBFINGER_RESP
 
-    # Test get_actor_url function
     url = webfinger.get_actor_url("@dev@microblog.pub")
     assert url == "https://microblog.pub"
 
@@ -143,17 +117,11 @@ def test_get_actor_url(mock_fetch_json, _, _1):
 @mock.patch("active_boxes.backend.check_url", return_value=None)
 @mock.patch("active_boxes.backend.Backend.fetch_json")
 def test_get_remote_follow_template(mock_fetch_json, _, _1):
-    # Initialize backend
     back = InMemBackend()
     use_backend(back)
 
-    # Mock the fetch_json method to return our test response
-    mock_response = mock.Mock()
-    mock_response.json.return_value = _WEBFINGER_RESP
-    mock_response.raise_for_status.return_value = None
-    mock_fetch_json.return_value = mock_response
+    mock_fetch_json.return_value = _WEBFINGER_RESP
 
-    # Test get_remote_follow_template function
     template = webfinger.get_remote_follow_template("@dev@microblog.pub")
     assert template == "https://microblog.pub/authorize_follow?profile={uri}"
 
