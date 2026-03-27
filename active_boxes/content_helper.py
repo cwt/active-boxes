@@ -7,7 +7,7 @@ from markdown import markdown
 import regex as re
 
 from .activitypub import get_backend
-from .webfinger import get_actor_url
+from .webfinger import get_actor_url_sync
 
 
 def _set_attrs(attrs, new=False):
@@ -45,10 +45,10 @@ def mentionify(
     tags = []
     for mention in re.findall(MENTION_REGEX, content):
         _, username, domain = mention.split("@")
-        if not (actor_url := get_actor_url(mention)):
+        if not (actor_url := get_actor_url_sync(mention)):
             # FIXME(tsileo): raise an error?
             continue
-        p = get_backend().fetch_iri(actor_url)
+        p = get_backend().fetch_iri_sync(actor_url)
         tags.append(dict(type="Mention", href=p["id"], name=mention))
 
         d = f"@{domain}"

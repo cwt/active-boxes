@@ -4,14 +4,13 @@ import logging
 from unittest import mock
 
 import pytest
-import requests
 from active_boxes import activitypub as ap
 from active_boxes import content_helper
 from active_boxes import urlutils
 from active_boxes import webfinger
 from active_boxes.activitypub import use_backend
 from active_boxes.errors import BadActivityError
-from active_boxes.collection import parse_collection
+from active_boxes.collection import parse_collection_sync
 from active_boxes.errors import RecursionLimitExceededError
 from active_boxes.errors import UnexpectedActivityTypeError
 
@@ -637,7 +636,7 @@ def test_little_content_helper_linkify():
 
 
 @mock.patch(
-    "active_boxes.content_helper.get_actor_url",
+    "active_boxes.content_helper.get_actor_url_sync",
     return_value="https://microblog.pub",
 )
 def test_little_content_helper_mention(_):
@@ -665,7 +664,7 @@ def test_little_content_helper_mention(_):
 
 
 @mock.patch(
-    "active_boxes.content_helper.get_actor_url",
+    "active_boxes.content_helper.get_actor_url_sync",
     return_value="https://microblog.pub",
 )
 def test_little_content_helper_tag(_):
@@ -743,95 +742,123 @@ _WEBFINGER_RESP = {
 
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
-@mock.patch("active_boxes.backend.check_url", return_value=None)
-@mock.patch("active_boxes.backend.Backend.fetch_json")
-def test_webfinger(mock_fetch_json, _, _1):
+@mock.patch(
+    "active_boxes.backend.check_url",
+    new_callable=mock.AsyncMock,
+    return_value=None,
+)
+def test_webfinger(_, _1):
     back = InMemBackend()
     use_backend(back)
 
-    mock_fetch_json.return_value = _WEBFINGER_RESP
+    back.FETCH_MOCK["https://microblog.pub/.well-known/webfinger"] = (
+        _WEBFINGER_RESP
+    )
 
-    if data := webfinger.webfinger("@dev@microblog.pub"):
+    if data := webfinger.webfinger_sync("@dev@microblog.pub"):
         assert data == _WEBFINGER_RESP
 
         assert (
-            webfinger.get_actor_url("@dev@microblog.pub")
+            webfinger.get_actor_url_sync("@dev@microblog.pub")
             == "https://microblog.pub"
         )
         assert (
-            webfinger.get_remote_follow_template("@dev@microblog.pub")
+            webfinger.get_remote_follow_template_sync("@dev@microblog.pub")
             == "https://microblog.pub/authorize_follow?profile={uri}"
         )
 
 
 def test_webfinger_invalid_url():
     with pytest.raises(urlutils.InvalidURLError):
-        webfinger.webfinger("@dev@localhost:8080")
+        webfinger.webfinger_sync("@dev@localhost:8080")
 
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
-@mock.patch("active_boxes.backend.check_url", return_value=None)
-@mock.patch("active_boxes.backend.Backend.fetch_json")
-def test_webfinger_with_http_url(mock_fetch_json, _, _1):
+@mock.patch(
+    "active_boxes.backend.check_url",
+    new_callable=mock.AsyncMock,
+    return_value=None,
+)
+def test_webfinger_with_http_url(_, _1):
     back = InMemBackend()
     use_backend(back)
 
-    mock_fetch_json.return_value = _WEBFINGER_RESP
+    back.FETCH_MOCK["http://dev@microblog.pub/.well-known/webfinger"] = (
+        _WEBFINGER_RESP
+    )
 
-    data = webfinger.webfinger("http://dev@microblog.pub")
+    data = webfinger.webfinger_sync("http://dev@microblog.pub")
     assert data == _WEBFINGER_RESP
 
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
-@mock.patch("active_boxes.backend.check_url", return_value=None)
-@mock.patch("active_boxes.backend.Backend.fetch_json")
-def test_webfinger_with_acct_uri(mock_fetch_json, _, _1):
+@mock.patch(
+    "active_boxes.backend.check_url",
+    new_callable=mock.AsyncMock,
+    return_value=None,
+)
+def test_webfinger_with_acct_uri(_, _1):
     back = InMemBackend()
     use_backend(back)
 
-    mock_fetch_json.return_value = _WEBFINGER_RESP
+    back.FETCH_MOCK["https://microblog.pub/.well-known/webfinger"] = (
+        _WEBFINGER_RESP
+    )
 
-    data = webfinger.webfinger("acct:dev@microblog.pub")
+    data = webfinger.webfinger_sync("acct:dev@microblog.pub")
     assert data == _WEBFINGER_RESP
 
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
-@mock.patch("active_boxes.backend.check_url", return_value=None)
-@mock.patch("active_boxes.backend.Backend.fetch_json")
-def test_webfinger_connection_error(mock_fetch_json, _, _1):
+@mock.patch(
+    "active_boxes.backend.check_url",
+    new_callable=mock.AsyncMock,
+    return_value=None,
+)
+def test_webfinger_connection_error(_, _1):
     back = InMemBackend()
     use_backend(back)
 
-    mock_fetch_json.side_effect = requests.ConnectionError("Connection failed")
+    # Clear FETCH_MOCK to ensure no cached data
+    back.FETCH_MOCK.clear()
 
-    data = webfinger.webfinger("@dev@microblog.pub")
-    assert data is None
+    data = webfinger.webfinger_sync("@dev@microblog.pub")
+    assert not data
 
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
-@mock.patch("active_boxes.backend.check_url", return_value=None)
-@mock.patch("active_boxes.backend.Backend.fetch_json")
-def test_get_actor_url(mock_fetch_json, _, _1):
+@mock.patch(
+    "active_boxes.backend.check_url",
+    new_callable=mock.AsyncMock,
+    return_value=None,
+)
+def test_get_actor_url(_, _1):
     back = InMemBackend()
     use_backend(back)
 
-    mock_fetch_json.return_value = _WEBFINGER_RESP
+    back.FETCH_MOCK["https://microblog.pub/.well-known/webfinger"] = (
+        _WEBFINGER_RESP
+    )
 
-    # Test get_actor_url function
-    url = webfinger.get_actor_url("@dev@microblog.pub")
+    url = webfinger.get_actor_url_sync("@dev@microblog.pub")
     assert url == "https://microblog.pub"
 
 
 @mock.patch("active_boxes.webfinger.check_url", return_value=None)
-@mock.patch("active_boxes.backend.check_url", return_value=None)
-@mock.patch("active_boxes.backend.Backend.fetch_json")
-def test_get_remote_follow_template(mock_fetch_json, _, _1):
+@mock.patch(
+    "active_boxes.backend.check_url",
+    new_callable=mock.AsyncMock,
+    return_value=None,
+)
+def test_get_remote_follow_template(_, _1):
     back = InMemBackend()
     use_backend(back)
 
-    mock_fetch_json.return_value = _WEBFINGER_RESP
+    back.FETCH_MOCK["https://microblog.pub/.well-known/webfinger"] = (
+        _WEBFINGER_RESP
+    )
 
-    template = webfinger.get_remote_follow_template("@dev@microblog.pub")
+    template = webfinger.get_remote_follow_template_sync("@dev@microblog.pub")
     assert template == "https://microblog.pub/authorize_follow?profile={uri}"
 
 
@@ -844,7 +871,7 @@ def test_webfinger_debug_mode(mock_check_url, mock_backend_check_url):
     mock_backend_check_url.side_effect = urlutils.InvalidURLError("Invalid URL")
 
     with pytest.raises(urlutils.InvalidURLError):
-        webfinger.webfinger("@dev@localhost:8080", debug=True)
+        webfinger.webfinger_sync("@dev@localhost:8080", debug=True)
 
 
 def test_empty_collection():
@@ -857,7 +884,9 @@ def test_empty_collection():
         "id": "https://lol.com",
     }
 
-    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+    if out := parse_collection_sync(
+        url="https://lol.com", fetcher=back.fetch_iri_sync
+    ):
         assert out == []
 
 
@@ -872,7 +901,9 @@ def test_recursive_collection_limit():
     }
 
     with pytest.raises(RecursionLimitExceededError):
-        parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
+        parse_collection_sync(
+            url="https://lol.com", fetcher=back.fetch_iri_sync
+        )
 
 
 def test_unexpected_activity_type():
@@ -885,7 +916,9 @@ def test_unexpected_activity_type():
     }
 
     with pytest.raises(UnexpectedActivityTypeError):
-        parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
+        parse_collection_sync(
+            url="https://lol.com", fetcher=back.fetch_iri_sync
+        )
 
 
 def test_collection():
@@ -903,7 +936,9 @@ def test_collection():
         "items": [1, 2, 3],
     }
 
-    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+    if out := parse_collection_sync(
+        url="https://lol.com", fetcher=back.fetch_iri_sync
+    ):
         assert out == [1, 2, 3]
 
 
@@ -927,5 +962,7 @@ def test_ordered_collection():
         "orderedItems": [4, 5, 6],
     }
 
-    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+    if out := parse_collection_sync(
+        url="https://lol.com", fetcher=back.fetch_iri_sync
+    ):
         assert out == [1, 2, 3, 4, 5, 6]

@@ -23,6 +23,36 @@ if TYPE_CHECKING:
     from active_boxes import activitypub as ap
 
 
+def _run_sync(coro):
+    """Run an async coroutine from sync code.
+
+    This enables Flask/Django and other sync frameworks to use the library.
+    For new code, prefer async/await syntax.
+
+    Args:
+        coro: A coroutine to run
+
+    Returns:
+        The result of the coroutine
+
+    Raises:
+        RuntimeError: If called from within an async context
+    """
+    if not asyncio.iscoroutine(coro):
+        return coro
+
+    try:
+        asyncio.get_running_loop()
+        raise RuntimeError(
+            "Cannot run async code from within an async context. "
+            "Use 'await' instead of the _sync() wrapper."
+        )
+    except RuntimeError as e:
+        if "no running event loop" in str(e):
+            return asyncio.run(coro)
+        raise
+
+
 class Backend(abc.ABC):
     """Abstract base class for ActivityPub backends.
 
@@ -36,8 +66,15 @@ class Backend(abc.ABC):
         return False
 
     async def check_url(self, url: str) -> None:
-        """Check if a URL is valid and accessible."""
+        """Check if a URL is valid and accessible (async)."""
         await check_url(url, debug=self.debug_mode())
+
+    def check_url_sync(self, url: str) -> None:
+        """Check if a URL is valid and accessible (sync wrapper).
+
+        For async code, use await check_url() instead.
+        """
+        _run_sync(check_url(url, debug=self.debug_mode()))
 
     def user_agent(self) -> str:
         return f"Active Boxes/{__version__}; +http://github.com/tsileo/little-boxes)"
@@ -46,8 +83,8 @@ class Backend(abc.ABC):
         """Generate a random object ID."""
         return binascii.hexlify(os.urandom(8)).decode("utf-8")
 
-    async def fetch_json_async(self, url: str, **kwargs) -> Dict[str, Any]:
-        """Fetch JSON from a URL asynchronously.
+    async def fetch_json(self, url: str, **kwargs) -> Dict[str, Any]:
+        """Fetch JSON from a URL (async).
 
         Args:
             url: The URL to fetch
@@ -68,29 +105,32 @@ class Backend(abc.ABC):
         resp = await client.get_json(url, headers=headers, **kwargs)
         return resp
 
-    def fetch_json(self, url: str, **kwargs) -> Dict[str, Any]:
+    def fetch_json_sync(self, url: str, **kwargs) -> Dict[str, Any]:
         """Fetch JSON from a URL (sync wrapper).
 
-        For async code, use await fetch_json_async() instead.
+        For async code, use await fetch_json() instead.
         """
-        try:
-            loop = asyncio.get_running_loop()
-            if loop.is_running():
-                raise RuntimeError(
-                    "Cannot use sync fetch_json from async context. "
-                    "Use await fetch_json_async() instead."
-                )
-        except RuntimeError:
-            pass
-        return asyncio.run(self.fetch_json_async(url, **kwargs))
+        return _run_sync(self.fetch_json(url, **kwargs))
 
     def parse_collection(
         self,
         payload: Optional[Dict[str, Any]] = None,
         url: Optional[str] = None,
     ) -> List[Any]:
-        """Parse a Collection/OrderedCollection."""
-        return parse_collection(
+        """Parse a Collection/OrderedCollection (sync)."""
+        from .collection import parse_collection_sync
+
+        return parse_collection_sync(
+            payload=payload, url=url, fetcher=self.fetch_iri_sync
+        )
+
+    async def parse_collection_async(
+        self,
+        payload: Optional[Dict[str, Any]] = None,
+        url: Optional[str] = None,
+    ) -> List[Any]:
+        """Parse a Collection/OrderedCollection (async)."""
+        return await parse_collection(
             payload=payload, url=url, fetcher=self.fetch_iri
         )
 
@@ -104,16 +144,16 @@ class Backend(abc.ABC):
     def is_from_outbox(
         self, as_actor: "ap.Person", activity: "ap.BaseActivity"
     ) -> bool:
-        """Check if an activity originated from an actor's outbox."""
-        return activity.get_actor().id == as_actor.id
+        """Check if an activity originated from an actor's outbox (sync)."""
+        return activity.get_actor_sync().id == as_actor.id
 
     @abc.abstractmethod
     def base_url(self) -> str:
         """Return the application's base URL."""
         pass
 
-    async def fetch_iri_async(self, iri: str, **kwargs) -> "ap.ObjectType":
-        """Async: Fetch an IRI/URL and return parsed ActivityPub object.
+    async def fetch_iri(self, iri: str, **kwargs) -> "ap.ObjectType":
+        """Fetch an IRI/URL and return parsed ActivityPub object (async).
 
         Args:
             iri: The IRI/URL to fetch
@@ -153,26 +193,12 @@ class Backend(abc.ABC):
                 f"unable to fetch {iri}, unknown error: {e}"
             )
 
-    def fetch_iri(self, iri: str, **kwargs) -> "ap.ObjectType":
+    def fetch_iri_sync(self, iri: str, **kwargs) -> "ap.ObjectType":
         """Fetch an IRI/URL (sync wrapper).
 
-        For async code, use await fetch_iri_async() instead.
-        This method automatically handles calling async backends from sync code.
+        For async code, use await fetch_iri() instead.
         """
-        try:
-            loop = asyncio.get_running_loop()
-            if loop.is_running():
-                raise RuntimeError(
-                    "Cannot use sync fetch_iri from async context. "
-                    "Use await fetch_iri_async() instead."
-                )
-        except RuntimeError:
-            pass
-
-        result = self.fetch_iri_async(iri, **kwargs)
-        if asyncio.iscoroutine(result):
-            return asyncio.run(result)
-        return result
+        return _run_sync(self.fetch_iri(iri, **kwargs))
 
     @abc.abstractmethod
     def activity_url(self, obj_id: str) -> str:
@@ -193,8 +219,8 @@ class AsyncBackend(Backend):
     """
 
     async def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
-        """Fetch JSON using the global HTTP client."""
-        return await self.fetch_json_async(url, **kwargs)
+        """Fetch JSON using the global HTTP client (async)."""
+        return await self.fetch_json(url, **kwargs)
 
     async def post_json(
         self,
@@ -202,7 +228,7 @@ class AsyncBackend(Backend):
         data: Dict[str, Any],
         headers: Optional[Dict[str, str]] = None,
     ) -> Any:
-        """POST JSON to a URL.
+        """POST JSON to a URL (async).
 
         Args:
             url: Target URL

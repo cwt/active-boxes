@@ -250,7 +250,7 @@ class TestAsyncMethods:
     """Test that async methods work correctly."""
 
     @pytest.mark.asyncio
-    async def test_deliver_activity_async(self):
+    async def test_deliver_activity(self):
         """deliver_activity should be awaitable."""
         plugin = MinimalPlugin()
 
@@ -265,7 +265,7 @@ class TestAsyncMethods:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_receive_activity_async(self):
+    async def test_receive_activity(self):
         """receive_activity should be awaitable."""
         plugin = MinimalPlugin()
 

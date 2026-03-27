@@ -52,13 +52,13 @@ def test_httpsig():
 
         # Mock the verify_request function to return True
         with mock.patch(
-            "active_boxes.httpsig.verify_request", return_value=True
+            "active_boxes.httpsig.verify_request_sync", return_value=True
         ):
             auth = httpsig.HTTPSigAuth(k)
             if resp := requests.post(
                 "https://remote-instance.com", json={"ok": 1}, auth=auth
             ):
-                assert httpsig.verify_request(
+                assert httpsig.verify_request_sync(
                     resp.request.method,
                     resp.request.path_url,
                     resp.request.headers,
@@ -95,13 +95,13 @@ def test_httpsig_key():
 
         # Mock the verify_request function to return True
         with mock.patch(
-            "active_boxes.httpsig.verify_request", return_value=True
+            "active_boxes.httpsig.verify_request_sync", return_value=True
         ):
             auth = httpsig.HTTPSigAuth(k)
             if resp := requests.post(
                 "https://remote-instance.com", json={"ok": 1}, auth=auth
             ):
-                assert httpsig.verify_request(
+                assert httpsig.verify_request_sync(
                     resp.request.method,
                     resp.request.path_url,
                     resp.request.headers,
@@ -186,7 +186,7 @@ def test_get_public_key_key_type():
     }
 
     try:
-        k = httpsig._get_public_key("https://example.com/key")
+        k = httpsig._get_public_key_sync("https://example.com/key")
         assert k is not None
     except ValueError:
         pass
@@ -210,7 +210,7 @@ def test_get_public_key_person_type():
     }
 
     try:
-        k = httpsig._get_public_key("https://example.com/person")
+        k = httpsig._get_public_key_sync("https://example.com/person")
         assert k is not None
     except ValueError:
         pass
@@ -235,7 +235,7 @@ def test_get_public_key_wrong_key_id():
 
     try:
         with pytest.raises(ValueError):
-            httpsig._get_public_key("https://example.com/wrong-key")
+            httpsig._get_public_key_sync("https://example.com/wrong-key")
     finally:
         ap.BACKEND = original_backend
 
@@ -244,17 +244,19 @@ def test_get_public_key_wrong_key_id():
 def test_verify_request_no_signature(mock_parse_sig_header):
     mock_parse_sig_header.return_value = None
 
-    result = httpsig.verify_request("GET", "/test", {"Signature": None}, "")
+    result = httpsig.verify_request_sync(
+        "GET", "/test", {"Signature": None}, ""
+    )
     assert result is False
 
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key_async")
+@mock.patch("active_boxes.httpsig._get_public_key")
 @mock.patch("active_boxes.httpsig._verify_h")
 def test_verify_request_success(
     mock_verify_h,
-    mock_get_public_key_async,
+    mock_get_public_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -264,18 +266,20 @@ def test_verify_request_success(
         "signature": "SGVsbG8gV29ybGQh",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key_async.return_value = mock.Mock()
+    mock_get_public_key.return_value = mock.Mock()
     mock_verify_h.return_value = True
 
-    result = httpsig.verify_request("GET", "/test", {"Signature": "dummy"}, b"")
+    result = httpsig.verify_request_sync(
+        "GET", "/test", {"Signature": "dummy"}, b""
+    )
     assert result is True
 
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key_async")
+@mock.patch("active_boxes.httpsig._get_public_key")
 def test_verify_request_activity_gone_error(
-    mock_get_public_key_async,
+    mock_get_public_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -285,17 +289,19 @@ def test_verify_request_activity_gone_error(
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key_async.side_effect = ActivityGoneError("Gone")
+    mock_get_public_key.side_effect = ActivityGoneError("Gone")
 
-    result = httpsig.verify_request("GET", "/test", {"Signature": "dummy"}, b"")
+    result = httpsig.verify_request_sync(
+        "GET", "/test", {"Signature": "dummy"}, b""
+    )
     assert result is False
 
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key_async")
+@mock.patch("active_boxes.httpsig._get_public_key")
 def test_verify_request_activity_not_found_error(
-    mock_get_public_key_async,
+    mock_get_public_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -305,9 +311,11 @@ def test_verify_request_activity_not_found_error(
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key_async.side_effect = ActivityNotFoundError("Not found")
+    mock_get_public_key.side_effect = ActivityNotFoundError("Not found")
 
-    result = httpsig.verify_request("GET", "/test", {"Signature": "dummy"}, b"")
+    result = httpsig.verify_request_sync(
+        "GET", "/test", {"Signature": "dummy"}, b""
+    )
     assert result is False
 
 

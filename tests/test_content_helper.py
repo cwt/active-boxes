@@ -33,7 +33,7 @@ def test_little_content_helper_linkify():
 
 
 @mock.patch(
-    "active_boxes.content_helper.get_actor_url",
+    "active_boxes.content_helper.get_actor_url_sync",
     return_value="https://microblog.pub",
 )
 def test_little_content_helper_mention(_):
@@ -61,7 +61,7 @@ def test_little_content_helper_mention(_):
 
 
 @mock.patch(
-    "active_boxes.content_helper.get_actor_url",
+    "active_boxes.content_helper.get_actor_url_sync",
     return_value="https://microblog.pub",
 )
 def test_little_content_helper_tag(_):

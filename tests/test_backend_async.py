@@ -56,13 +56,13 @@ class TestAsyncBackend:
 
     @pytest.mark.asyncio
     async def test_get_json(self):
-        """Test AsyncBackend.get_json calls fetch_json_async."""
+        """Test AsyncBackend.get_json calls fetch_json."""
         back = _create_async_backend()
-        back.fetch_json_async = mock.AsyncMock(return_value={"test": "data"})
+        back.fetch_json = mock.AsyncMock(return_value={"test": "data"})
 
         result = await back.get_json("https://example.com")
         assert result == {"test": "data"}
-        back.fetch_json_async.assert_called_once_with("https://example.com")
+        back.fetch_json.assert_called_once_with("https://example.com")
 
 
 def _create_test_backend():
@@ -78,7 +78,7 @@ def _create_test_backend():
         def note_url(self, obj_id: str) -> str:
             return f"https://example.com/note/{obj_id}"
 
-        async def fetch_iri_async(self, iri: str, **kwargs):
+        async def fetch_iri(self, iri: str, **kwargs):
             return {"id": iri, "type": "Note"}
 
     return ConcreteBackend()
@@ -100,7 +100,7 @@ def _create_test_backend_debug():
         def note_url(self, obj_id: str) -> str:
             return f"https://example.com/note/{obj_id}"
 
-        async def fetch_iri_async(self, iri: str, **kwargs):
+        async def fetch_iri(self, iri: str, **kwargs):
             return {"id": iri, "type": "Note"}
 
     return ConcreteBackendDebug()
@@ -126,11 +126,12 @@ class TestBackendFetchJson:
     """Test Backend.fetch_json method."""
 
     def test_fetch_json_sync_no_loop(self):
-        """Test fetch_json when no event loop is running."""
+        """Test fetch_json_sync when no event loop is running."""
         back = _create_test_backend()
-        back.fetch_json_async = mock.AsyncMock(return_value={"test": "data"})
+        # Mock the async method that fetch_json_sync wraps
+        back.fetch_json = mock.AsyncMock(return_value={"test": "data"})
 
-        result = back.fetch_json("https://example.com")
+        result = back.fetch_json_sync("https://example.com")
         assert result == {"test": "data"}
 
 
@@ -138,11 +139,12 @@ class TestBackendFetchIri:
     """Test Backend.fetch_iri method."""
 
     def test_fetch_iri_sync_no_loop(self):
-        """Test fetch_iri when no event loop is running."""
+        """Test fetch_iri_sync when no event loop is running."""
         back = _create_test_backend()
-        back.fetch_iri_async = mock.AsyncMock(
+        # Mock the async method that fetch_iri_sync wraps
+        back.fetch_iri = mock.AsyncMock(
             return_value={"id": "https://example.com"}
         )
 
-        result = back.fetch_iri("https://example.com")
+        result = back.fetch_iri_sync("https://example.com")
         assert result == {"id": "https://example.com"}

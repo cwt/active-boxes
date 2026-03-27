@@ -19,13 +19,43 @@ from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
 
 from .activitypub import _has_type
-from .activitypub import _maybe_await
-from .activitypub import get_backend_async
+from .activitypub import _await_if_coroutine
+from .activitypub import get_backend
 from .errors import ActivityGoneError
 from .errors import ActivityNotFoundError
 from .key import Key
 
 logger = logging.getLogger(__name__)
+
+
+def _run_sync(coro):
+    """Run an async coroutine from sync code.
+
+    This enables Flask/Django and other sync frameworks to use the library.
+    For new code, prefer async/await syntax.
+
+    Args:
+        coro: A coroutine to run
+
+    Returns:
+        The result of the coroutine
+
+    Raises:
+        RuntimeError: If called from within an async context
+    """
+    if not asyncio.iscoroutine(coro):
+        return coro
+
+    try:
+        asyncio.get_running_loop()
+        raise RuntimeError(
+            "Cannot run async code from within an async context. "
+            "Use 'await' instead of the _sync() wrapper."
+        )
+    except RuntimeError as e:
+        if "no running event loop" in str(e):
+            return asyncio.run(coro)
+        raise
 
 
 def _build_signed_string(
@@ -83,11 +113,21 @@ def _body_digest(body: Union[str, bytes]) -> str:
     return "SHA-256=" + base64.b64encode(h.digest()).decode("utf-8")
 
 
-async def _get_public_key_async(key_id: str) -> Key:
-    """Async: Fetch and parse a public key by key ID."""
-    backend = await get_backend_async()
+async def _get_public_key(key_id: str) -> Key:
+    """Fetch and parse a public key by key ID (async).
+
+    Args:
+        key_id: The key ID to fetch
+
+    Returns:
+        The Key object
+
+    Raises:
+        ValueError: If the key format is invalid
+    """
+    backend = get_backend()
     result = backend.fetch_iri(key_id)
-    actor = await _maybe_await(result)
+    actor = await _await_if_coroutine(result)
 
     match actor:
         case {
@@ -115,20 +155,34 @@ async def _get_public_key_async(key_id: str) -> Key:
     return k
 
 
-def _get_public_key(key_id: str) -> Key:
-    """Fetch and parse a public key by key ID (sync wrapper)."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(_get_public_key_async(key_id))
+def _get_public_key_sync(key_id: str) -> Key:
+    """Fetch and parse a public key by key ID (sync wrapper).
 
-    return loop.run_until_complete(_get_public_key_async(key_id))
+    For async code, use await _get_public_key() instead.
+
+    Args:
+        key_id: The key ID to fetch
+
+    Returns:
+        The Key object
+    """
+    return _run_sync(_get_public_key(key_id))
 
 
-async def verify_request_async(
+async def verify_request(
     method: str, path: str, headers: Dict[str, str], body: str
 ) -> bool:
-    """Async: Verify an HTTP Signature on a request."""
+    """Verify an HTTP Signature on a request (async).
+
+    Args:
+        method: HTTP method (e.g., "GET", "POST")
+        path: Request path
+        headers: Request headers
+        body: Request body
+
+    Returns:
+        True if the signature is valid, False otherwise
+    """
     if not (hsig := _parse_sig_header(headers.get("Signature"))):
         logger.debug("no signature in header")
         return False
@@ -138,7 +192,7 @@ async def verify_request_async(
     )
 
     try:
-        k = await _get_public_key_async(hsig["keyId"])
+        k = await _get_public_key(hsig["keyId"])
     except (ActivityGoneError, ActivityNotFoundError):
         logger.debug("cannot get public key")
         return False
@@ -148,21 +202,26 @@ async def verify_request_async(
     )
 
 
-def verify_request(
+def verify_request_sync(
     method: str, path: str, headers: Dict[str, str], body: str
 ) -> bool:
-    """Verify an HTTP Signature on a request (sync wrapper)."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(verify_request_async(method, path, headers, body))
+    """Verify an HTTP Signature on a request (sync wrapper).
 
-    return loop.run_until_complete(
-        verify_request_async(method, path, headers, body)
-    )
+    For async code, use await verify_request() instead.
+
+    Args:
+        method: HTTP method (e.g., "GET", "POST")
+        path: Request path
+        headers: Request headers
+        body: Request body
+
+    Returns:
+        True if the signature is valid, False otherwise
+    """
+    return _run_sync(verify_request(method, path, headers, body))
 
 
-async def sign_request_async(
+async def sign_request(
     method: str,
     path: str,
     headers: Dict[str, str],
@@ -170,7 +229,19 @@ async def sign_request_async(
     body: Optional[str] = None,
     host: Optional[str] = None,
 ) -> Dict[str, str]:
-    """Async: Sign a request with HTTP Signatures."""
+    """Sign a request with HTTP Signatures (async).
+
+    Args:
+        method: HTTP method (e.g., "GET", "POST")
+        path: Request path
+        headers: Request headers
+        key: The key to sign with
+        body: Optional request body
+        host: Optional host header value
+
+    Returns:
+        Updated headers dict with signature
+    """
     logger.info(f"keyid={key.key_id()}")
 
     if host is None:
@@ -204,7 +275,7 @@ async def sign_request_async(
     return headers
 
 
-def sign_request(
+def sign_request_sync(
     method: str,
     path: str,
     headers: Dict[str, str],
@@ -212,23 +283,29 @@ def sign_request(
     body: Optional[str] = None,
     host: Optional[str] = None,
 ) -> Dict[str, str]:
-    """Sign a request with HTTP Signatures (sync wrapper)."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(
-            sign_request_async(method, path, headers, key, body, host)
-        )
+    """Sign a request with HTTP Signatures (sync wrapper).
 
-    return loop.run_until_complete(
-        sign_request_async(method, path, headers, key, body, host)
-    )
+    For async code, use await sign_request() instead.
+
+    Args:
+        method: HTTP method (e.g., "GET", "POST")
+        path: Request path
+        headers: Request headers
+        key: The key to sign with
+        body: Optional request body
+        host: Optional host header value
+
+    Returns:
+        Updated headers dict with signature
+    """
+    return _run_sync(sign_request(method, path, headers, key, body, host))
 
 
 class HTTPSigAuth:
-    """Async HTTP Signature authentication for aiohttp.
+    """HTTP Signature authentication for signing requests.
 
-    Use this class to sign outgoing requests with HTTP Signatures.
+    This class provides both async and sync interfaces for signing
+    outgoing requests with HTTP Signatures.
     """
 
     def __init__(self, key: Key) -> None:
@@ -243,17 +320,7 @@ class HTTPSigAuth:
         body: Optional[str] = None,
     ) -> Dict[str, str]:
         """Sign a request (sync interface for backwards compatibility)."""
-        return sign_request(method, path, headers, self.key, body)
-
-    async def sign_async(
-        self,
-        method: str,
-        path: str,
-        headers: Dict[str, str],
-        body: Optional[str] = None,
-    ) -> Dict[str, str]:
-        """Sign a request (async interface)."""
-        return await sign_request_async(method, path, headers, self.key, body)
+        return sign_request_sync(method, path, headers, self.key, body)
 
     async def sign(
         self,
@@ -263,4 +330,14 @@ class HTTPSigAuth:
         body: Optional[str] = None,
     ) -> Dict[str, str]:
         """Sign a request (async interface)."""
-        return await sign_request_async(method, path, headers, self.key, body)
+        return await sign_request(method, path, headers, self.key, body)
+
+    def sign_sync(
+        self,
+        method: str,
+        path: str,
+        headers: Dict[str, str],
+        body: Optional[str] = None,
+    ) -> Dict[str, str]:
+        """Sign a request (sync interface)."""
+        return sign_request_sync(method, path, headers, self.key, body)

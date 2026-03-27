@@ -224,7 +224,7 @@ def test_create_activity():
     assert create.id == "https://example.com/create/1"
     assert create.actor == "https://example.com/person/1"
 
-    obj = create.get_object()
+    obj = create.get_object_sync()
     assert isinstance(obj, ap.Note)
     assert obj.id == "https://example.com/note/1"
 
@@ -604,7 +604,7 @@ def test_update_activity():
     assert update.id == "https://example.com/update/1"
     assert update.actor == "https://example.com/person/1"
 
-    obj = update.get_object()
+    obj = update.get_object_sync()
     assert isinstance(obj, ap.Note)
     assert obj.id == "https://example.com/note/1"
     assert obj.content == "This is an updated test note"
@@ -663,7 +663,7 @@ def test_accept_activity():
     assert accept.id == "https://example.com/accept/1"
     assert accept.actor == "https://example.com/person/2"
 
-    obj = accept.get_object()
+    obj = accept.get_object_sync()
     assert isinstance(obj, ap.Follow)
     assert obj.id == "https://example.com/follow/1"
 
@@ -721,7 +721,7 @@ def test_reject_activity():
     assert reject.id == "https://example.com/reject/1"
     assert reject.actor == "https://example.com/person/2"
 
-    obj = reject.get_object()
+    obj = reject.get_object_sync()
     assert isinstance(obj, ap.Follow)
     assert obj.id == "https://example.com/follow/1"
 
@@ -835,7 +835,7 @@ def test_undo_activity():
     assert undo.id == "https://example.com/undo/1"
     assert undo.actor == "https://example.com/person/1"
 
-    obj = undo.get_object()
+    obj = undo.get_object_sync()
     assert isinstance(obj, ap.Like)
     assert obj.id == "https://example.com/like/1"
 
@@ -880,7 +880,7 @@ def test_follow_activity():
     assert follow.actor == "https://example.com/person/1"
     assert follow.object == "https://example.com/person/2"
 
-    obj = follow.get_object()
+    obj = follow.get_object_sync()
     assert isinstance(obj, ap.Person)
     assert obj.id == "https://example.com/person/2"
 
@@ -1080,7 +1080,7 @@ def test_base_activity_get_actor():
         },
     }
     activity = ap.parse_activity(activity_data)
-    actor = activity.get_actor()
+    actor = activity.get_actor_sync()
     assert isinstance(actor, ap.Person)
     assert actor.id == "https://example.com/person/1"
 
@@ -1099,7 +1099,7 @@ def test_base_activity_get_actor():
         },
     }
     activity_dict = ap.parse_activity(activity_data_dict)
-    actor_dict = activity_dict.get_actor()
+    actor_dict = activity_dict.get_actor_sync()
     assert isinstance(actor_dict, ap.Person)
     assert actor_dict.id == "https://example.com/person/1"
 
@@ -1136,8 +1136,8 @@ def test_base_activity_get_actor_cached():
     activity = ap.parse_activity(activity_data)
 
     # Call get_actor twice to test caching
-    actor1 = activity.get_actor()
-    actor2 = activity.get_actor()
+    actor1 = activity.get_actor_sync()
+    actor2 = activity.get_actor_sync()
 
     # Should return the same object (cached)
     assert actor1 is actor2
@@ -1171,7 +1171,7 @@ def test_base_activity_get_actor_attributed_to():
         "attributedTo": "https://example.com/person/1",
     }
     note = ap.parse_activity(note_data)
-    actor = note.get_actor()
+    actor = note.get_actor_sync()
     assert isinstance(actor, ap.Person)
     assert actor.id == "https://example.com/person/1"
 
@@ -1535,21 +1535,21 @@ def test_note_uncovered_methods():
     create_activity = note.build_create()
     assert isinstance(create_activity, ap.Create)
     assert create_activity.actor == "https://example.com/person/1"
-    assert create_activity.get_object().content == "Test note"
+    assert create_activity.get_object_sync().content == "Test note"
 
     # Test build_like method
-    like_activity = note.build_like(note.get_actor())
+    like_activity = note.build_like(note.get_actor_sync())
     assert isinstance(like_activity, ap.Like)
     assert like_activity.actor == "https://example.com/person/1"
     assert like_activity.object == "https://example.com/note/1"
 
     # Test build_announce method
-    announce_activity = note.build_announce(note.get_actor())
+    announce_activity = note.build_announce(note.get_actor_sync())
     assert isinstance(announce_activity, ap.Announce)
     assert announce_activity.actor == "https://example.com/person/1"
     assert announce_activity.object == "https://example.com/note/1"
     assert ap.AS_PUBLIC in announce_activity.to
-    assert note.get_actor().followers in announce_activity.cc
+    assert note.get_actor_sync().followers in announce_activity.cc
 
     # Test has_mention with invalid tag (should not crash)
     note_data_with_invalid_tag = {

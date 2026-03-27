@@ -40,7 +40,10 @@ def test_create_init_method_edge_cases():
     create_obj_published = ap.parse_activity(create_data_obj_published)
     # Both should be the same
     assert create_obj_published.published == "2023-01-01T12:00:00Z"
-    assert create_obj_published.get_object().published == "2023-01-01T12:00:00Z"
+    assert (
+        create_obj_published.get_object_sync().published
+        == "2023-01-01T12:00:00Z"
+    )
 
     # Restore backend
     ap.use_backend(None)

@@ -187,12 +187,33 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Async Backend | [x] | `Backend` with async methods |
+| Async Backend | [x] | `Backend` with async methods (`fetch_json()`, `fetch_iri()`) |
 | AsyncHTTPClient | [x] | `http_client.py` with aiohttp |
-| Async WebFinger | [x] | `webfinger_async()` |
-| Async HTTPSignatures | [x] | `verify_request_async()`, `sign_request_async()` |
-| Async Collection Parsing | [x] | `parse_collection_async()`, `CollectionPaginator` |
-| Sync Wrappers | [x] | Backwards compatible sync methods |
+| Async WebFinger | [x] | `webfinger()` (async-primary), `webfinger_sync()` wrapper |
+| Async HTTPSignatures | [x] | `verify_request()`, `sign_request()` (async-primary) |
+| Async Collection Parsing | [x] | `parse_collection()`, `CollectionPaginator` |
+| Sync Wrappers | [x] | `_sync()` suffix for Flask/Django compatibility |
+
+### Async-First API Design
+
+The library uses an **async-first** naming convention where the primary method names are async:
+
+```python
+# Async (recommended for new code)
+actor = await fetch_iri(actor_url)
+data = await fetch_json(url)
+activity = await get_object()
+
+# Sync wrappers (for Flask/Django)
+actor = fetch_iri_sync(actor_url)
+data = fetch_json_sync(url)
+activity = get_object_sync()
+```
+
+This design enables:
+- Clean async code for FastAPI, aiohttp, Quart, etc.
+- Backwards compatibility with Flask, Django sync views via `_sync()` wrappers
+- Clear distinction between async and sync usage patterns
 
 ---
 
@@ -244,14 +265,14 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 | base_url() | [x] (abstract - app implements) |
 | activity_url() | [x] (abstract - app implements) |
 | note_url() | [x] (abstract - app implements) |
-| fetch_iri() / fetch_iri_async() | [x] GET with redirects |
-| fetch_json() / fetch_json_async() | [x] GET with JSON |
-| check_url() / check_url_async() | [x] |
+| fetch_iri() / fetch_iri_sync() | [x] GET with redirects (async-primary) |
+| fetch_json() / fetch_json_sync() | [x] GET with JSON (async-primary) |
+| check_url() / check_url_sync() | [x] |
 | user_agent() | [x] |
 | random_object_id() | [x] |
 | extra_inboxes() | [x] (hook for app to add recipients) |
 | is_from_outbox() | [x] |
-| parse_collection() / parse_collection_async() | [x] |
+| parse_collection() / parse_collection_sync() | [x] |
 | get_first_page() | [x] CollectionPaginator |
 | iterate_forward() | [x] CollectionPaginator |
 | iterate_backward() | [x] CollectionPaginator |

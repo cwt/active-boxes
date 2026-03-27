@@ -6,7 +6,7 @@ from active_boxes.collection import (
     CollectionPage,
     CollectionPaginator,
     parse_collection,
-    parse_collection_async,
+    parse_collection_sync,
 )
 from active_boxes.errors import RecursionLimitExceededError
 from active_boxes.errors import UnexpectedActivityTypeError
@@ -26,7 +26,9 @@ def test_empty_collection():
         "id": "https://lol.com",
     }
 
-    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+    if out := parse_collection_sync(
+        url="https://lol.com", fetcher=back.fetch_iri_sync
+    ):
         assert out == []
 
 
@@ -41,7 +43,9 @@ def test_recursive_collection_limit():
     }
 
     with pytest.raises(RecursionLimitExceededError):
-        parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
+        parse_collection_sync(
+            url="https://lol.com", fetcher=back.fetch_iri_sync
+        )
 
 
 def test_unexpected_activity_type():
@@ -54,7 +58,9 @@ def test_unexpected_activity_type():
     }
 
     with pytest.raises(UnexpectedActivityTypeError):
-        parse_collection(url="https://lol.com", fetcher=back.fetch_iri)
+        parse_collection_sync(
+            url="https://lol.com", fetcher=back.fetch_iri_sync
+        )
 
 
 def test_collection():
@@ -72,7 +78,9 @@ def test_collection():
         "items": [1, 2, 3],
     }
 
-    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+    if out := parse_collection_sync(
+        url="https://lol.com", fetcher=back.fetch_iri_sync
+    ):
         assert out == [1, 2, 3]
 
 
@@ -96,7 +104,9 @@ def test_ordered_collection():
         "orderedItems": [4, 5, 6],
     }
 
-    if out := parse_collection(url="https://lol.com", fetcher=back.fetch_iri):
+    if out := parse_collection_sync(
+        url="https://lol.com", fetcher=back.fetch_iri_sync
+    ):
         assert out == [1, 2, 3, 4, 5, 6]
 
 
@@ -123,7 +133,7 @@ def test_collection_page_with_all_fields():
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_basic():
+async def test_parse_collection_basic():
     back = InMemBackend()
     ap.use_backend(back)
 
@@ -133,14 +143,14 @@ async def test_parse_collection_async_basic():
         "id": "https://lol.com",
     }
 
-    result = await parse_collection_async(
-        url="https://lol.com", fetcher=back.fetch_iri_async
+    result = await parse_collection(
+        url="https://lol.com", fetcher=back.fetch_iri
     )
     assert result == [1, 2, 3]
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_with_payload():
+async def test_parse_collection_with_payload():
     payload = {
         "type": "Collection",
         "orderedItems": [1, 2, 3],
@@ -150,20 +160,18 @@ async def test_parse_collection_async_with_payload():
     async def noop_fetcher(url):
         return {}
 
-    result = await parse_collection_async(payload=payload, fetcher=noop_fetcher)
+    result = await parse_collection(payload=payload, fetcher=noop_fetcher)
     assert result == [1, 2, 3]
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_no_fetcher():
+async def test_parse_collection_no_fetcher():
     with pytest.raises(ValueError, match="must provide a fetcher"):
-        await parse_collection_async(
-            payload={"type": "Collection", "items": []}
-        )
+        await parse_collection(payload={"type": "Collection", "items": []})
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_recursion_limit():
+async def test_parse_collection_recursion_limit():
     back = InMemBackend()
     ap.use_backend(back)
 
@@ -174,15 +182,15 @@ async def test_parse_collection_async_recursion_limit():
     }
 
     with pytest.raises(RecursionLimitExceededError):
-        await parse_collection_async(
+        await parse_collection(
             url="https://lol.com",
-            fetcher=back.fetch_iri_async,
+            fetcher=back.fetch_iri,
             max_depth=1,
         )
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_first_string():
+async def test_parse_collection_first_string():
     back = InMemBackend()
     ap.use_backend(back)
 
@@ -197,14 +205,14 @@ async def test_parse_collection_async_first_string():
         "id": "https://lol.com/page1",
     }
 
-    result = await parse_collection_async(
-        url="https://lol.com", fetcher=back.fetch_iri_async
+    result = await parse_collection(
+        url="https://lol.com", fetcher=back.fetch_iri
     )
     assert result == [1, 2]
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_first_dict():
+async def test_parse_collection_first_dict():
     payload = {
         "type": "Collection",
         "first": {
@@ -218,12 +226,12 @@ async def test_parse_collection_async_first_dict():
     async def noop_fetcher(url):
         return {}
 
-    result = await parse_collection_async(payload=payload, fetcher=noop_fetcher)
+    result = await parse_collection(payload=payload, fetcher=noop_fetcher)
     assert result == [1, 2]
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_page_with_next():
+async def test_parse_collection_page_with_next():
     back = InMemBackend()
     ap.use_backend(back)
 
@@ -239,14 +247,14 @@ async def test_parse_collection_async_page_with_next():
         "id": "https://lol.com/page2",
     }
 
-    result = await parse_collection_async(
-        url="https://lol.com/page1", fetcher=back.fetch_iri_async
+    result = await parse_collection(
+        url="https://lol.com/page1", fetcher=back.fetch_iri
     )
     assert result == [1, 2, 3, 4]
 
 
 @pytest.mark.asyncio
-async def test_parse_collection_async_page_with_prev():
+async def test_parse_collection_page_with_prev():
     back = InMemBackend()
     ap.use_backend(back)
 
@@ -257,8 +265,8 @@ async def test_parse_collection_async_page_with_prev():
         "id": "https://lol.com/page1",
     }
 
-    result = await parse_collection_async(
-        url="https://lol.com/page1", fetcher=back.fetch_iri_async
+    result = await parse_collection(
+        url="https://lol.com/page1", fetcher=back.fetch_iri
     )
     assert result == [1, 2]
 

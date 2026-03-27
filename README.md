@@ -20,6 +20,7 @@ The original README can be found in [ORIGINAL-README.md](ORIGINAL-README.md).
 - [x] ActivityPub protocol compliance - Core 11 activities, Extended activities
 - [x] Updated documentation and examples
 - [x] Prepared for stable release
+- [x] **Async-by-default API** with sync wrappers for Flask/Django compatibility
 
 ## Modernization Features
 
@@ -81,7 +82,7 @@ HTTP Signatures (generation/verification), Linked Data Signatures
 
 ## Quick Start
 
-**This is an async library** - your plugin should use `asyncio` or any async framework (FastAPI, aiohttp, etc.).
+**This is an async-first library** - the primary API uses `async`/`await`. Sync wrappers (e.g., `fetch_iri_sync()`) are available for Flask/Django compatibility.
 
 ### 1. Implement the Plugin Protocol
 
@@ -150,6 +151,8 @@ ap.use_backend(plugin)
 
 ### 3. Create and Send Activities
 
+**Async (Recommended for FastAPI, aiohttp, etc.):**
+
 ```python
 # Create a note
 note = ap.Note(
@@ -165,11 +168,34 @@ create.set_id("https://myapp.example/activity/abc123", "abc123")
 # Get recipients and deliver
 recipients = create.recipients()  # Computed by library
 for inbox in recipients:
-    actor = fetch_actor(create.get_actor().id)
+    actor = await fetch_actor(create.get_actor().id)
     await plugin.deliver_activity(create.to_dict(), inbox, actor)
 ```
 
+**Sync (For Flask, Django sync views):**
+
+```python
+# Create a note
+note = ap.Note(
+    content="Hello, federation!",
+    attributedTo="https://myapp.example/user/alice",
+    to=[ap.AS_PUBLIC],
+)
+
+# Create the activity wrapping the note
+create = note.build_create()
+create.set_id("https://myapp.example/activity/abc123", "abc123")
+
+# Get recipients and deliver (sync wrapper)
+recipients = create.recipients()
+for inbox in recipients:
+    actor = fetch_actor_sync(create.get_actor_sync().id)
+    plugin.deliver_activity(create.to_dict(), inbox, actor)
+```
+
 ### 4. Receive Activities
+
+**Async (FastAPI, aiohttp):**
 
 ```python
 # In your inbox endpoint handler
@@ -177,6 +203,17 @@ async def inbox_handler(request):
     activity = await request.json()
     await plugin.receive_activity(activity, source_inbox=str(request.url))
     return web.Response(status=202)
+```
+
+**Sync (Flask, Django sync views):**
+
+```python
+# In your Flask route
+@app.post("/inbox")
+def inbox():
+    activity = request.get_json()
+    plugin.receive_activity_sync(activity, source_inbox=request.url)
+    return "", 202
 ```
 
 ### 5. Working with Actors
@@ -207,9 +244,28 @@ outbox = ap.OrderedCollection(
     first="https://myapp.example/user/alice/outbox?page=1",
 )
 
-# Library handles parsing remote collections
-items = backend.parse_collection(url="https://example.com/user/bob/outbox")
+# Library handles parsing remote collections (async)
+items = await backend.parse_collection(url="https://example.com/user/bob/outbox")
+
+# Or use sync wrapper
+items = backend.parse_collection_sync(url="https://example.com/user/bob/outbox")
 ```
+
+## API Naming Convention
+
+The library uses an **async-first** naming convention:
+
+| Operation | Async (Primary) | Sync Wrapper |
+|-----------|----------------|--------------|
+| Fetch IRI | `fetch_iri()` | `fetch_iri_sync()` |
+| Fetch JSON | `fetch_json()` | `fetch_json_sync()` |
+| Get Actor | `get_actor()` | `get_actor_sync()` |
+| Get Object | `get_object()` | `get_object_sync()` |
+| WebFinger | `webfinger()` | `webfinger_sync()` |
+| Verify Signature | `verify_request()` | `verify_request_sync()` |
+| Parse Collection | `parse_collection()` | `parse_collection_sync()` |
+
+**Guideline:** Use async methods by default. Use `_sync()` variants only when integrating with sync frameworks like Flask or Django sync views.
 
 ## Plugin Responsibilities
 

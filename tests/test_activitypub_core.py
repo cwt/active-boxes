@@ -301,7 +301,7 @@ def test_ensure_backend_error():
     try:
         activity = ap.Note(id="test", content="test", attributedTo="test")
         with pytest.raises(ap.Error):
-            activity.get_object()  # This calls _ensure_backend
+            activity.get_object_sync()  # This calls _ensure_backend
     finally:
         ap.BACKEND = original_backend  # Reset
 
@@ -507,7 +507,7 @@ def test_validate_actor_exceptions():
 
     # Test with backend that raises ActivityGoneError (should propagate)
     class MockGoneBackend:
-        def fetch_iri(self, iri):
+        def fetch_iri_sync(self, iri):
             raise ActivityGoneError("Gone")
 
     ap.use_backend(MockGoneBackend())
@@ -516,7 +516,7 @@ def test_validate_actor_exceptions():
 
     # Test with backend that raises ActivityNotFoundError (should propagate)
     class MockNotFoundBackend:
-        def fetch_iri(self, iri):
+        def fetch_iri_sync(self, iri):
             raise ActivityNotFoundError("Not Found")
 
     ap.use_backend(MockNotFoundBackend())
@@ -525,7 +525,7 @@ def test_validate_actor_exceptions():
 
     # Test with backend that raises other exception (should become BadActivityError)
     class MockOtherErrorBackend:
-        def fetch_iri(self, iri):
+        def fetch_iri_sync(self, iri):
             raise Exception("Other error")
 
     ap.use_backend(MockOtherErrorBackend())
@@ -612,7 +612,7 @@ def test_reset_object_cache():
     }
 
     # Get object (this should cache it)
-    obj1 = note.get_object()
+    obj1 = note.get_object_sync()
 
     # Reset cache
     note.reset_object_cache()
@@ -621,7 +621,7 @@ def test_reset_object_cache():
     note._data["object"]["content"] = "Modified note"
 
     # Get object again (this should process the modified data)
-    obj2 = note.get_object()
+    obj2 = note.get_object_sync()
 
     # They should be different objects with different content
     assert obj1 is not obj2

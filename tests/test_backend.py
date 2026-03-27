@@ -1,9 +1,12 @@
 import json
 from typing import List
 from typing import Optional
+from unittest import mock
+
+import pytest
 
 import active_boxes.activitypub as ap
-from active_boxes.backend import Backend
+from active_boxes.backend import Backend, AsyncBackend, _run_sync
 
 
 def track_call(f):
@@ -90,15 +93,15 @@ class InMemBackend(Backend):
             self._METHOD_CALLS[p.id] = []
             return p
 
-    async def fetch_iri_async(self, iri: str, **kwargs) -> ap.ObjectType:
-        """Async version for compatibility."""
+    async def fetch_iri(self, iri: str, **kwargs) -> ap.ObjectType:
+        """Async fetch for in-memory backend."""
         return self._fetch_iri_sync(iri)
 
-    async def fetch_json_async(self, url: str, **kwargs) -> dict:
+    async def fetch_json(self, url: str, **kwargs) -> dict:
         """Async fetch_json for webfinger support."""
         return self.FETCH_MOCK.get(url, {})
 
-    def fetch_iri(self, iri: str, **kwargs) -> ap.ObjectType:
+    def fetch_iri_sync(self, iri: str, **kwargs) -> ap.ObjectType:
         """Sync fetch for in-memory backend."""
         return self._fetch_iri_sync(iri)
 
@@ -170,35 +173,39 @@ class InMemBackend(Backend):
         self, as_actor: ap.Person, activity: ap.BaseActivity
     ) -> None:
         print(f"saving {activity!r} to DB")
-        actor_id = activity.get_actor().id
+        actor_id = activity.get_actor_sync().id
         if activity.id in self.OUTBOX_IDX[actor_id]:
             return
         self.DB[actor_id]["outbox"].append(activity)
         self.OUTBOX_IDX[actor_id][activity.id] = activity
         self.FETCH_MOCK[activity.id] = activity.to_dict()
         if isinstance(activity, ap.Create):
-            self.FETCH_MOCK[activity.get_object().id] = (
-                activity.get_object().to_dict()
+            self.FETCH_MOCK[activity.get_object_sync().id] = (
+                activity.get_object_sync().to_dict()
             )
 
     @track_call
     def new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        self.FOLLOWERS[follow.get_object().id].append(follow.get_actor().id)
+        self.FOLLOWERS[follow.get_object_sync().id].append(
+            follow.get_actor_sync().id
+        )
 
     @track_call
     def undo_new_follower(self, as_actor: ap.Person, follow: ap.Follow) -> None:
-        self.FOLLOWERS[follow.get_object().id].remove(follow.get_actor().id)
+        self.FOLLOWERS[follow.get_object_sync().id].remove(
+            follow.get_actor_sync().id
+        )
 
     @track_call
     def new_following(self, as_actor: ap.Person, follow: ap.Follow) -> None:
         print(f"new following {follow!r}")
-        self.FOLLOWING[as_actor.id].append(follow.get_object().id)
+        self.FOLLOWING[as_actor.id].append(follow.get_object_sync().id)
 
     @track_call
     def undo_new_following(
         self, as_actor: ap.Person, follow: ap.Follow
     ) -> None:
-        self.FOLLOWING[as_actor.id].remove(follow.get_object().id)
+        self.FOLLOWING[as_actor.id].remove(follow.get_object_sync().id)
 
     def followers(self, as_actor: ap.Person) -> List[str]:
         return self.FOLLOWERS[as_actor.id]
@@ -213,7 +220,9 @@ class InMemBackend(Backend):
         payload = json.loads(payload_encoded)
         print(f"post_to_remote_inbox {payload} {recp}")
         act = ap.parse_activity(payload)
-        actor = ap.parse_activity(self.fetch_iri(recp.replace("/inbox", "")))
+        actor = ap.parse_activity(
+            self.fetch_iri_sync(recp.replace("/inbox", ""))
+        )
         act.process_from_inbox(actor)
 
     @track_call
@@ -279,3 +288,351 @@ class InMemBackend(Backend):
     @track_call
     def outbox_create(self, as_actor: ap.Person, activity: ap.Create) -> None:
         pass
+
+
+# Tests for _run_sync helper
+def test_run_sync_non_coroutine():
+    """Test _run_sync with a non-coroutine value."""
+    result = _run_sync(42)
+    assert result == 42
+
+
+def test_run_sync_with_string():
+    """Test _run_sync with a string value."""
+    result = _run_sync("hello")
+    assert result == "hello"
+
+
+def test_run_sync_with_none():
+    """Test _run_sync with None."""
+    result = _run_sync(None)
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_run_sync_from_async_context_raises():
+    """Test that _run_sync raises RuntimeError when called from async context."""
+
+    async def dummy_coro():
+        return 42
+
+    coro = dummy_coro()
+    with pytest.raises(
+        RuntimeError, match="Cannot run async code from within an async context"
+    ):
+        _run_sync(coro)
+    # Clean up the coroutine if not consumed
+    try:
+        await coro
+    except RuntimeError:
+        pass
+
+
+def test_run_sync_from_sync_context():
+    """Test that _run_sync works from sync context."""
+
+    async def dummy_coro():
+        return "success"
+
+    result = _run_sync(dummy_coro())
+    assert result == "success"
+
+
+# Tests for Backend base class
+class TestBackendBase:
+    """Test Backend base class methods."""
+
+    def test_debug_mode_default(self):
+        """Test that debug_mode returns False by default."""
+
+        # Create a minimal concrete Backend subclass
+        class TestBackend(Backend):
+            def base_url(self) -> str:
+                return "https://test.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://test.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://test.com/note/{obj_id}"
+
+        back = TestBackend()
+        assert back.debug_mode() is False
+
+    def test_user_agent(self):
+        """Test that user_agent returns expected format."""
+        back = InMemBackend()
+        ua = back.user_agent()
+        assert "Active Boxes/" in ua
+        assert "github.com/tsileo/little-boxes" in ua
+
+    def test_random_object_id(self):
+        """Test that random_object_id returns a hex string."""
+        back = InMemBackend()
+        obj_id = back.random_object_id()
+        assert isinstance(obj_id, str)
+        assert len(obj_id) == 16  # 8 bytes = 16 hex chars
+
+    def test_random_object_id_unique(self):
+        """Test that random_object_id returns unique values."""
+        back = InMemBackend()
+        ids = {back.random_object_id() for _ in range(100)}
+        assert len(ids) == 100
+
+    def test_extra_inboxes_default(self):
+        """Test that extra_inboxes returns empty list by default."""
+        back = InMemBackend()
+        assert back.extra_inboxes() == []
+
+
+@pytest.mark.asyncio
+class TestBackendAsync:
+    """Test Backend async methods."""
+
+    async def test_check_url_async(self):
+        """Test async check_url method."""
+        back = InMemBackend()
+        await back.check_url("https://example.com")  # Should not raise
+
+    async def test_fetch_json_async(self):
+        """Test async fetch_json method."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/data"] = {"test": "data"}
+
+        result = await back.fetch_json("https://example.com/data")
+        assert result == {"test": "data"}
+
+    async def test_fetch_json_async_with_headers(self):
+        """Test async fetch_json with custom headers."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/data"] = {"test": "data"}
+
+        result = await back.fetch_json(
+            "https://example.com/data", headers={"Custom": "header"}
+        )
+        assert result == {"test": "data"}
+
+    async def test_fetch_iri_async(self):
+        """Test async fetch_iri method."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/actor"] = {
+            "id": "https://example.com/actor",
+            "type": "Person",
+        }
+
+        result = await back.fetch_iri("https://example.com/actor")
+        assert result["id"] == "https://example.com/actor"
+
+    async def test_fetch_iri_async_invalid_iri(self):
+        """Test fetch_iri with invalid IRI."""
+
+        # Create a minimal backend that uses base fetch_iri implementation
+        class TestBackend(Backend):
+            def base_url(self) -> str:
+                return "https://test.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://test.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://test.com/note/{obj_id}"
+
+        back = TestBackend()
+
+        # Invalid IRI (not starting with http) should raise NotAnActivityError
+        with pytest.raises(ap.NotAnActivityError, match="not a valid IRI"):
+            await back.fetch_iri("not-a-valid-iri")
+
+    async def test_fetch_iri_async_error_propagation(self):
+        """Test that errors from get_json propagate correctly."""
+
+        # Create a minimal backend that uses base fetch_iri implementation
+        class TestBackend(Backend):
+            def base_url(self) -> str:
+                return "https://test.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://test.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://test.com/note/{obj_id}"
+
+        back = TestBackend()
+
+        # Mock check_url to pass and get_http_client to raise an error
+        with mock.patch.object(back, "check_url"):
+            with mock.patch(
+                "active_boxes.backend.get_http_client"
+            ) as mock_client:
+                mock_client_instance = mock.AsyncMock()
+                mock_client_instance.get_json.side_effect = (
+                    ap.ActivityNotFoundError("Not found")
+                )
+                mock_client.return_value = mock_client_instance
+
+                with pytest.raises(ap.ActivityNotFoundError):
+                    await back.fetch_iri("https://example.com/missing")
+
+    async def test_parse_collection_async(self):
+        """Test async parse_collection method."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/collection"] = {
+            "type": "Collection",
+            "items": [1, 2, 3],
+        }
+
+        result = await back.parse_collection_async(
+            url="https://example.com/collection"
+        )
+        assert result == [1, 2, 3]
+
+
+class TestBackendSync:
+    """Test Backend sync wrapper methods."""
+
+    def test_check_url_sync(self):
+        """Test sync check_url wrapper."""
+        back = InMemBackend()
+        back.check_url_sync("https://example.com")  # Should not raise
+
+    def test_fetch_json_sync(self):
+        """Test sync fetch_json wrapper."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/data"] = {"test": "data"}
+
+        result = back.fetch_json_sync("https://example.com/data")
+        assert result == {"test": "data"}
+
+    def test_fetch_iri_sync(self):
+        """Test sync fetch_iri wrapper."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/actor"] = {
+            "id": "https://example.com/actor",
+            "type": "Person",
+        }
+
+        result = back.fetch_iri_sync("https://example.com/actor")
+        assert result["id"] == "https://example.com/actor"
+
+    def test_parse_collection_sync(self):
+        """Test sync parse_collection method."""
+        back = InMemBackend()
+        back.FETCH_MOCK["https://example.com/collection"] = {
+            "type": "Collection",
+            "items": [1, 2, 3],
+        }
+
+        result = back.parse_collection(url="https://example.com/collection")
+        assert result == [1, 2, 3]
+
+    def test_is_from_outbox(self):
+        """Test is_from_outbox method."""
+        back = InMemBackend()
+        ap.use_backend(back)
+
+        # Create a person and activity
+        person = back.setup_actor("Test User", "test")
+        note = ap.Note(
+            content="Test",
+            attributedTo=person.id,
+            to=[ap.AS_PUBLIC],
+        )
+        create = note.build_create()
+        create.set_id(back.activity_url("test-activity"), "test-activity")
+
+        # Test is_from_outbox
+        assert back.is_from_outbox(person, create) is True
+
+        # Test with different actor
+        other_person = back.setup_actor("Other User", "other")
+        assert back.is_from_outbox(other_person, create) is False
+
+
+class TestAsyncBackend:
+    """Test AsyncBackend class."""
+
+    @pytest.mark.asyncio
+    async def test_get_json(self):
+        """Test AsyncBackend.get_json calls fetch_json."""
+
+        class ConcreteAsyncBackend(AsyncBackend):
+            def base_url(self) -> str:
+                return "https://example.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://example.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://example.com/note/{obj_id}"
+
+        back = ConcreteAsyncBackend()
+        back.fetch_json = mock.AsyncMock(return_value={"test": "data"})
+
+        result = await back.get_json("https://example.com")
+        assert result == {"test": "data"}
+        back.fetch_json.assert_called_once_with("https://example.com")
+
+    @pytest.mark.asyncio
+    async def test_post_json(self):
+        """Test AsyncBackend.post_json method."""
+
+        class ConcreteAsyncBackend(AsyncBackend):
+            def base_url(self) -> str:
+                return "https://example.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://example.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://example.com/note/{obj_id}"
+
+        back = ConcreteAsyncBackend()
+
+        with mock.patch("active_boxes.backend.get_http_client") as mock_client:
+            mock_client_instance = mock.AsyncMock()
+            mock_client_instance.post_json = mock.AsyncMock()
+            mock_client.return_value = mock_client_instance
+
+            await back.post_json(
+                "https://example.com/inbox",
+                {"test": "data"},
+                headers={"Custom": "header"},
+            )
+
+            mock_client_instance.post_json.assert_called_once()
+            call_args = mock_client_instance.post_json.call_args
+            assert call_args[0][0] == "https://example.com/inbox"
+            assert call_args[0][1] == {"test": "data"}
+
+    @pytest.mark.asyncio
+    async def test_post_json_with_custom_headers(self):
+        """Test AsyncBackend.post_json with custom headers."""
+
+        class ConcreteAsyncBackend(AsyncBackend):
+            def base_url(self) -> str:
+                return "https://example.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://example.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://example.com/note/{obj_id}"
+
+        back = ConcreteAsyncBackend()
+
+        with mock.patch("active_boxes.backend.get_http_client") as mock_client:
+            mock_client_instance = mock.AsyncMock()
+            mock_response = mock.AsyncMock()
+            mock_client_instance.post_json.return_value = mock_response
+            mock_client.return_value = mock_client_instance
+
+            await back.post_json(
+                "https://example.com/inbox",
+                {"test": "data"},
+                headers={"X-Custom": "value"},
+            )
+
+            # Verify headers were merged
+            call_kwargs = mock_client_instance.post_json.call_args[1]
+            assert "headers" in call_kwargs
+            assert call_kwargs["headers"]["X-Custom"] == "value"

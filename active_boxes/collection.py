@@ -222,14 +222,14 @@ class CollectionPaginator:
         )
 
 
-async def parse_collection_async(
+async def parse_collection(
     payload: Optional[Dict[str, Any]] = None,
     url: Optional[str] = None,
     level: int = 0,
     fetcher: Optional[Callable[[str], Any]] = None,
     max_depth: int = 3,
 ) -> List[Any]:
-    """Async version: Resolve/fetch a Collection/OrderedCollection.
+    """Resolve/fetch a Collection/OrderedCollection (async).
 
     Args:
         payload: Optional collection dict
@@ -267,7 +267,7 @@ async def parse_collection_async(
         if "first" in payload:
             if isinstance(payload["first"], str):
                 out.extend(
-                    await parse_collection_async(
+                    await parse_collection(
                         url=payload["first"],
                         level=level + 1,
                         fetcher=fetch,
@@ -281,7 +281,7 @@ async def parse_collection_async(
                     out.extend(payload["first"]["items"])
                 if n := payload["first"].get("next"):
                     out.extend(
-                        await parse_collection_async(
+                        await parse_collection(
                             url=n,
                             level=level + 1,
                             fetcher=fetch,
@@ -311,33 +311,27 @@ async def parse_collection_async(
     return out
 
 
-def parse_collection(
-    payload: Optional[Dict[str, Any]] = None,
-    url: Optional[str] = None,
-    level: int = 0,
-    fetcher: Optional[Callable[[str], Any]] = None,
-) -> List[Any]:
-    """Resolve/fetch a Collection/OrderedCollection (sync wrapper).
-
-    For async code, use parse_collection_async() instead.
-    """
-    if not fetcher:
-        raise ValueError("must provide a fetcher")
-
-    if inspect.iscoroutinefunction(fetcher):
-        return asyncio.run(parse_collection_async(payload, url, level, fetcher))
-
-    return _parse_collection_sync(payload, url, level, fetcher)
-
-
-def _parse_collection_sync(
+def parse_collection_sync(
     payload: Optional[Dict[str, Any]] = None,
     url: Optional[str] = None,
     level: int = 0,
     fetcher: Optional[Callable[[str], Any]] = None,
     max_depth: int = 3,
 ) -> List[Any]:
-    """Synchronous implementation of collection parsing."""
+    """Resolve/fetch a Collection/OrderedCollection (sync).
+
+    For async code, use await parse_collection() instead.
+
+    Args:
+        payload: Optional collection dict
+        url: Optional URL to fetch
+        level: Current recursion depth
+        fetcher: Sync function to fetch URLs
+        max_depth: Maximum recursion depth
+
+    Returns:
+        List of items from the collection
+    """
     if not fetcher:
         raise ValueError("must provide a fetcher")
     if level > max_depth:
@@ -357,7 +351,7 @@ def _parse_collection_sync(
         if "first" in payload:
             if isinstance(payload["first"], str):
                 out.extend(
-                    _parse_collection_sync(
+                    parse_collection_sync(
                         url=payload["first"],
                         level=level + 1,
                         fetcher=fetcher,
@@ -371,7 +365,7 @@ def _parse_collection_sync(
                     out.extend(payload["first"]["items"])
                 if n := payload["first"].get("next"):
                     out.extend(
-                        _parse_collection_sync(
+                        parse_collection_sync(
                             url=n,
                             level=level + 1,
                             fetcher=fetcher,

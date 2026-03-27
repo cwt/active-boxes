@@ -62,6 +62,14 @@ BACKEND: Optional[Backend] = None
 
 
 def get_backend() -> Backend:
+    """Get the backend instance.
+
+    Returns:
+        The global backend instance
+
+    Raises:
+        UninitializedBackendError: If no backend has been initialized
+    """
     if BACKEND is None:
         raise UninitializedBackendError
     return BACKEND
@@ -78,28 +86,79 @@ def use_backend(backend_instance):
     BACKEND = backend_instance
 
 
-async def get_backend_async() -> Backend:
-    """Get the async backend instance."""
-    if BACKEND is None:
-        raise UninitializedBackendError
-    return BACKEND
+def get_backend_sync() -> Backend:
+    """Get the backend instance (sync, alias for get_backend).
+
+    This is provided for consistency with the naming convention,
+    but get_backend() is already synchronous.
+
+    Returns:
+        The global backend instance
+    """
+    return get_backend()
 
 
-async def fetch_iri_async(iri: str, **kwargs) -> ObjectType:
-    """Async version of backend.fetch_iri."""
-    backend = await get_backend_async()
+async def fetch_iri(iri: str, **kwargs) -> ObjectType:
+    """Fetch an IRI and return the ActivityPub object (async).
+
+    Args:
+        iri: The IRI to fetch
+        **kwargs: Additional arguments passed to the backend
+
+    Returns:
+        The fetched ActivityPub object as a dict
+    """
+    backend = get_backend()
     result = backend.fetch_iri(iri, **kwargs)
-    return await _maybe_await(result)
+    return await _await_if_coroutine(result)
 
 
-async def fetch_json_async(url: str, **kwargs) -> Dict[str, Any]:
-    """Async version of backend.fetch_json."""
-    backend = await get_backend_async()
+def fetch_iri_sync(iri: str, **kwargs) -> ObjectType:
+    """Fetch an IRI and return the ActivityPub object (sync wrapper).
+
+    For async code, use await fetch_iri() instead.
+
+    Args:
+        iri: The IRI to fetch
+        **kwargs: Additional arguments passed to the backend
+
+    Returns:
+        The fetched ActivityPub object as a dict
+    """
+    return _run_sync(fetch_iri(iri, **kwargs))
+
+
+async def fetch_json(url: str, **kwargs) -> Dict[str, Any]:
+    """Fetch JSON from a URL (async).
+
+    Args:
+        url: The URL to fetch
+        **kwargs: Additional arguments passed to the backend
+
+    Returns:
+        Parsed JSON response
+    """
+    backend = get_backend()
     result = backend.fetch_json(url, **kwargs)
-    return await _maybe_await(result)
+    return await _await_if_coroutine(result)
 
 
-async def _maybe_await(result):
+def fetch_json_sync(url: str, **kwargs) -> Dict[str, Any]:
+    """Fetch JSON from a URL (sync wrapper).
+
+    For async code, use await fetch_json() instead.
+
+    Args:
+        url: The URL to fetch
+        **kwargs: Additional arguments passed to the backend
+
+    Returns:
+        Parsed JSON response
+    """
+    return _run_sync(fetch_json(url, **kwargs))
+
+
+async def _await_if_coroutine(result):
     """Await a result if it's a coroutine, otherwise return it directly.
 
     This allows supporting both sync and async backend methods.
@@ -115,21 +174,35 @@ async def _maybe_await(result):
     return result
 
 
-def _run_async(coro):
+def _run_sync(coro):
     """Run an async coroutine from sync code.
 
-    This is for backwards compatibility. Apps should use async code.
+    This enables Flask/Django and other sync frameworks to use the library.
+    For new code, prefer async/await syntax.
+
+    Args:
+        coro: A coroutine to run
+
+    Returns:
+        The result of the coroutine
+
+    Raises:
+        RuntimeError: If called from within an async context
     """
-    if asyncio.iscoroutine(coro):
-        try:
-            asyncio.get_running_loop()
-            raise RuntimeError(
-                "Cannot run async code from within an async context. "
-                "Use 'await' instead of _run_async()."
-            )
-        except RuntimeError:
+    if not asyncio.iscoroutine(coro):
+        return coro
+
+    try:
+        asyncio.get_running_loop()
+        raise RuntimeError(
+            "Cannot run async code from within an async context. "
+            "Use 'await' instead of the _sync() wrapper."
+        )
+    except RuntimeError as e:
+        if "no running event loop" in str(e):
+            # No event loop running, safe to use asyncio.run()
             return asyncio.run(coro)
-    return coro
+        raise
 
 
 def format_datetime(dt: datetime) -> str:
@@ -565,7 +638,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         obj_id = self._actor_id(obj)
         try:
-            actor = backend.fetch_iri(obj_id)
+            actor = backend.fetch_iri_sync(obj_id)
         except (ActivityGoneError, ActivityNotFoundError):
             raise
         except Exception:
@@ -595,18 +668,18 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         else:
             raise ValueError("invalid object")
 
-    async def get_object_async(self) -> "BaseActivity":
-        """Async version: Returns the object as a BaseActivity instance."""
+    async def get_object(self) -> "BaseActivity":
+        """Returns the object as a BaseActivity instance (async)."""
         _ensure_backend()
-        backend = await get_backend_async()
+        backend = get_backend()
 
         if self.__obj:
             return self.__obj
         if isinstance(self._data["object"], dict):
             p = parse_activity(self._data["object"])
         else:
-            result = backend.fetch_iri(self._data["object"])
-            obj = await _maybe_await(result)
+            result = backend.fetch_iri_sync(self._data["object"])
+            obj = await _await_if_coroutine(result)
             if ActivityType(obj.get("type")) not in self.ALLOWED_OBJECT_TYPES:
                 raise UnexpectedActivityTypeError(
                     f"invalid object type {obj.get('type')!r}"
@@ -616,12 +689,12 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         self.__obj = p
         return p
 
-    def get_object(self) -> "BaseActivity":
+    def get_object_sync(self) -> "BaseActivity":
         """Returns the object as a BaseActivity instance (sync wrapper).
 
-        For async code, use await get_object_async() instead.
+        For async code, use await get_object() instead.
         """
-        return _run_async(self.get_object_async())
+        return _run_sync(self.get_object())
 
     def get_target(self) -> str:
         """Returns the target as an IRI string."""
@@ -661,10 +734,10 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         return data
 
-    async def get_actor_async(self) -> ActorType:
-        """Async version: Returns the actor for this activity."""
+    async def get_actor(self) -> ActorType:
+        """Returns the actor for this activity (async)."""
         _ensure_backend()
-        backend = await get_backend_async()
+        backend = get_backend()
 
         if self.__actor:
             return self.__actor[0]
@@ -685,8 +758,8 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
             actor_id = self._actor_id(item)
 
-            result = backend.fetch_iri(actor_id)
-            actor_obj = await _maybe_await(result)
+            result = backend.fetch_iri_sync(actor_id)
+            actor_obj = await _await_if_coroutine(result)
             p = parse_activity(actor_obj)
             if not p.has_type(ACTOR_TYPES):  # type: ignore
                 raise UnexpectedActivityTypeError(f"{p!r} is not an actor")
@@ -694,12 +767,12 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
         return self.__actor[0]
 
-    def get_actor(self) -> ActorType:
+    def get_actor_sync(self) -> ActorType:
         """Returns the actor for this activity (sync wrapper).
 
-        For async code, use await get_actor_async() instead.
+        For async code, use await get_actor() instead.
         """
-        return _run_async(self.get_actor_async())
+        return _run_sync(self.get_actor())
 
     def _recipients(self) -> List[str]:
         return []
@@ -709,7 +782,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         backend = get_backend()
 
         recipients = self._recipients()
-        actor_id = self.get_actor().id
+        actor_id = self.get_actor_sync().id
 
         out: List[str] = []
         if self.type == ActivityType.CREATE.value:
@@ -720,7 +793,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 continue
 
             try:
-                actor = fetch_remote_activity(recipient)
+                actor = fetch_remote_activity_sync(recipient)
             except (
                 ActivityGoneError,
                 ActivityNotFoundError,
@@ -753,7 +826,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                         continue
 
                     try:
-                        col_actor = fetch_remote_activity(item)
+                        col_actor = fetch_remote_activity_sync(item)
                     except ActivityUnavailableError:
                         # TODO(tsileo): retry separately?
                         logger.info(f"failed {recipient} to fetch recipient")
@@ -906,10 +979,12 @@ class Follow(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        return [self.get_object().id]
+        return [self.get_object_sync().id]
 
     def build_undo(self) -> BaseActivity:
-        return Undo(object=self.to_dict(embed=True), actor=self.get_actor().id)
+        return Undo(
+            object=self.to_dict(embed=True), actor=self.get_actor_sync().id
+        )
 
 
 class Accept(BaseActivity):
@@ -919,7 +994,7 @@ class Accept(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        return [self.get_object().get_actor().id]
+        return [self.get_object_sync().get_actor_sync().id]
 
 
 class Reject(BaseActivity):
@@ -929,7 +1004,7 @@ class Reject(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        return [self.get_object().get_actor().id]
+        return [self.get_object_sync().get_actor_sync().id]
 
 
 class Undo(BaseActivity):
@@ -944,11 +1019,11 @@ class Undo(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        obj = self.get_object()
+        obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE == ActivityType.FOLLOW:
-            return [obj.get_object().id]
+            return [obj.get_object_sync().id]
         else:
-            return [obj.get_object().get_actor().id]
+            return [obj.get_object_sync().get_actor_sync().id]
 
 
 class Add(BaseActivity):
@@ -972,12 +1047,12 @@ class Like(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        return [self.get_object().get_actor().id]
+        return [self.get_object_sync().get_actor_sync().id]
 
     def build_undo(self) -> BaseActivity:
         return Undo(
             object=self.to_dict(embed=True, embed_object_id_only=True),
-            actor=self.get_actor().id,
+            actor=self.get_actor_sync().id,
         )
 
 
@@ -988,7 +1063,7 @@ class Announce(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        recipients = [self.get_object().get_actor().id]
+        recipients = [self.get_object_sync().get_actor_sync().id]
 
         for field in ["to", "cc"]:
             if field in self._data:
@@ -997,7 +1072,9 @@ class Announce(BaseActivity):
         return list(set(recipients))
 
     def build_undo(self) -> BaseActivity:
-        return Undo(actor=self.get_actor().id, object=self.to_dict(embed=True))
+        return Undo(
+            actor=self.get_actor_sync().id, object=self.to_dict(embed=True)
+        )
 
 
 class Delete(BaseActivity):
@@ -1005,31 +1082,31 @@ class Delete(BaseActivity):
     ALLOWED_OBJECT_TYPES = CREATE_TYPES + ACTOR_TYPES + [ActivityType.TOMBSTONE]
     OBJECT_REQUIRED = True
 
-    async def _get_actual_object_async(self) -> BaseActivity:
-        """Async version: Get the actual object being deleted."""
+    async def _get_actual_object(self) -> BaseActivity:
+        """Get the actual object being deleted (async)."""
         _ensure_backend()
-        backend = await get_backend_async()
+        backend = get_backend()
 
-        obj = await self.get_object_async()
+        obj = await self.get_object()
         if (
             obj.id.startswith(backend.base_url())
             and obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE
         ):
-            result = backend.fetch_iri(obj.id)
-            obj = parse_activity(await _maybe_await(result))
+            result = backend.fetch_iri_sync(obj.id)
+            obj = parse_activity(await _await_if_coroutine(result))
         if obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE:
-            result = backend.fetch_iri(obj.id)
-            better_obj = await _maybe_await(result)
+            result = backend.fetch_iri_sync(obj.id)
+            better_obj = await _await_if_coroutine(result)
             if better_obj:
                 return parse_activity(better_obj)
         return obj
 
-    def _get_actual_object(self) -> BaseActivity:
+    def _get_actual_object_sync(self) -> BaseActivity:
         """Get the actual object being deleted (sync wrapper)."""
-        return _run_async(self._get_actual_object_async())
+        return _run_sync(self._get_actual_object())
 
     def _recipients(self) -> List[str]:
-        obj = self._get_actual_object()
+        obj = self._get_actual_object_sync()
         return obj._recipients()
 
 
@@ -1046,7 +1123,7 @@ class Update(BaseActivity):
             if field in self._data:
                 recipients.extend(_to_list(self._data[field]))
 
-        recipients.extend(self.get_object()._recipients())
+        recipients.extend(self.get_object_sync()._recipients())
 
         return recipients
 
@@ -1082,9 +1159,9 @@ class Create(BaseActivity):
         self.reset_object_cache()
 
     def _init(self) -> None:
-        obj = self.get_object()
+        obj = self.get_object_sync()
         if not obj.attributedTo:
-            self._data["object"]["attributedTo"] = self.get_actor().id
+            self._data["object"]["attributedTo"] = self.get_actor_sync().id
         if not obj.published:
             if self.published:
                 self._data["object"]["published"] = self.published
@@ -1100,14 +1177,14 @@ class Create(BaseActivity):
             if field in self._data:
                 recipients.extend(_to_list(self._data[field]))
 
-        recipients.extend(self.get_object()._recipients())
+        recipients.extend(self.get_object_sync()._recipients())
 
         return recipients
 
     def get_tombstone(self, deleted: Optional[str] = None) -> BaseActivity:
         return Tombstone(
             id=self.id,
-            published=self.get_object().published,
+            published=self.get_object_sync().published,
             deleted=deleted,
             updated=deleted,
         )
@@ -1156,10 +1233,10 @@ class Flag(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        obj = self.get_object()
+        obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in ACTOR_TYPES:
             return [obj.id]
-        return [obj.get_actor().id]
+        return [obj.get_actor_sync().id]
 
 
 class Move(BaseActivity):
@@ -1176,7 +1253,7 @@ class Move(BaseActivity):
     TARGET_REQUIRED = False
 
     def _recipients(self) -> List[str]:
-        obj = self.get_object()
+        obj = self.get_object_sync()
         return [obj.id]
 
 
@@ -1192,7 +1269,7 @@ class Join(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        return [self.get_object().id]
+        return [self.get_object_sync().id]
 
 
 class Leave(BaseActivity):
@@ -1207,7 +1284,7 @@ class Leave(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        return [self.get_object().id]
+        return [self.get_object_sync().id]
 
 
 class View(BaseActivity):
@@ -1222,9 +1299,9 @@ class View(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        obj = self.get_object()
+        obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in CREATE_TYPES:
-            return [obj.get_actor().id]
+            return [obj.get_actor_sync().id]
         return []
 
 
@@ -1240,8 +1317,8 @@ class Listen(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        obj = self.get_object()
-        return [obj.get_actor().id]
+        obj = self.get_object_sync()
+        return [obj.get_actor_sync().id]
 
 
 class Read(BaseActivity):
@@ -1256,9 +1333,9 @@ class Read(BaseActivity):
     ACTOR_REQUIRED = True
 
     def _recipients(self) -> List[str]:
-        obj = self.get_object()
+        obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in CREATE_TYPES:
-            return [obj.get_actor().id]
+            return [obj.get_actor_sync().id]
         return []
 
 
@@ -1278,9 +1355,9 @@ class Write(BaseActivity):
         recipients = []
         if self.target:
             recipients.append(self.get_target())
-        obj = self.get_object()
+        obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in CREATE_TYPES:
-            recipients.append(obj.get_actor().id)
+            recipients.append(obj.get_actor_sync().id)
         return recipients
 
 
@@ -1506,24 +1583,39 @@ class OrderedCollectionPage(BaseActivity):
     ACTOR_REQUIRED = False
 
 
-async def fetch_remote_activity_async(
+async def fetch_remote_activity(
     iri: str, expected: Optional[ActivityType] = None
 ) -> BaseActivity:
-    """Async version: Fetch and parse a remote activity."""
-    backend = await get_backend_async()
+    """Fetch and parse a remote activity (async).
+
+    Args:
+        iri: The IRI of the activity to fetch
+        expected: Optional expected activity type
+
+    Returns:
+        The parsed BaseActivity instance
+    """
+    backend = get_backend()
     result = backend.fetch_iri(iri)
-    obj = await _maybe_await(result)
+    obj = await _await_if_coroutine(result)
     return parse_activity(obj, expected=expected)
 
 
-def fetch_remote_activity(
+def fetch_remote_activity_sync(
     iri: str, expected: Optional[ActivityType] = None
 ) -> BaseActivity:
     """Fetch and parse a remote activity (sync wrapper).
 
-    For async code, use await fetch_remote_activity_async() instead.
+    For async code, use await fetch_remote_activity() instead.
+
+    Args:
+        iri: The IRI of the activity to fetch
+        expected: Optional expected activity type
+
+    Returns:
+        The parsed BaseActivity instance
     """
-    return _run_async(fetch_remote_activity_async(iri, expected))
+    return _run_sync(fetch_remote_activity(iri, expected))
 
 
 def likes_url(obj_id: str) -> str:

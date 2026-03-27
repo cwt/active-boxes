@@ -26,8 +26,31 @@ logger = logging.getLogger(__name__)
 
 
 async def check_url(url: str, debug: bool = False) -> None:
-    """Async version of URL validation."""
+    """Validate a URL asynchronously.
+
+    Args:
+        url: The URL to validate
+        debug: Enable debug mode
+
+    Raises:
+        InvalidURLError: If the URL is invalid
+    """
     await asyncio.to_thread(sync_check_url, url, debug=debug)
+
+
+def check_url_sync(url: str, debug: bool = False) -> None:
+    """Validate a URL (sync wrapper).
+
+    For async code, use await check_url() instead.
+
+    Args:
+        url: The URL to validate
+        debug: Enable debug mode
+
+    Raises:
+        InvalidURLError: If the URL is invalid
+    """
+    _run_sync(check_url(url, debug=debug))
 
 
 class AsyncHTTPClient:
@@ -165,12 +188,12 @@ class AsyncHTTPClient:
             )
 
 
-async def fetch_json_async(
+async def fetch_json(
     url: str,
     user_agent: Optional[str] = None,
     timeout: int = 15,
 ) -> Dict[str, Any]:
-    """Standalone async function to fetch JSON from a URL.
+    """Fetch JSON from a URL (async).
 
     Args:
         url: The URL to fetch
@@ -195,12 +218,32 @@ async def fetch_json_async(
         await client.close()
 
 
-async def fetch_activity_async(
+def fetch_json_sync(
     url: str,
     user_agent: Optional[str] = None,
     timeout: int = 15,
 ) -> Dict[str, Any]:
-    """Fetch an ActivityPub activity/object from a URL.
+    """Fetch JSON from a URL (sync wrapper).
+
+    For async code, use await fetch_json() instead.
+
+    Args:
+        url: The URL to fetch
+        user_agent: Optional user agent string
+        timeout: Request timeout in seconds
+
+    Returns:
+        Parsed JSON response
+    """
+    return _run_sync(fetch_json(url, user_agent=user_agent, timeout=timeout))
+
+
+async def fetch_activity(
+    url: str,
+    user_agent: Optional[str] = None,
+    timeout: int = 15,
+) -> Dict[str, Any]:
+    """Fetch an ActivityPub activity/object from a URL (async).
 
     Args:
         url: The URL to fetch
@@ -210,7 +253,29 @@ async def fetch_activity_async(
     Returns:
         Activity dict
     """
-    return await fetch_json_async(url, user_agent=user_agent, timeout=timeout)
+    return await fetch_json(url, user_agent=user_agent, timeout=timeout)
+
+
+def fetch_activity_sync(
+    url: str,
+    user_agent: Optional[str] = None,
+    timeout: int = 15,
+) -> Dict[str, Any]:
+    """Fetch an ActivityPub activity/object from a URL (sync wrapper).
+
+    For async code, use await fetch_activity() instead.
+
+    Args:
+        url: The URL to fetch
+        user_agent: Optional user agent string
+        timeout: Request timeout in seconds
+
+    Returns:
+        Activity dict
+    """
+    return _run_sync(
+        fetch_activity(url, user_agent=user_agent, timeout=timeout)
+    )
 
 
 def verify_date_header(
@@ -258,19 +323,65 @@ _http_client: Optional[AsyncHTTPClient] = None
 
 
 async def get_http_client() -> AsyncHTTPClient:
-    """Get the global async HTTP client instance."""
+    """Get the global HTTP client instance (async)."""
     global _http_client
     if _http_client is None:
         _http_client = AsyncHTTPClient()
     return _http_client
 
 
+def get_http_client_sync() -> AsyncHTTPClient:
+    """Get the global HTTP client instance (sync wrapper).
+
+    For async code, use await get_http_client() instead.
+    """
+    return _run_sync(get_http_client())
+
+
 async def close_http_client() -> None:
-    """Close the global HTTP client."""
+    """Close the global HTTP client (async)."""
     global _http_client
     if _http_client:
         await _http_client.close()
         _http_client = None
+
+
+def close_http_client_sync() -> None:
+    """Close the global HTTP client (sync wrapper).
+
+    For async code, use await close_http_client() instead.
+    """
+    _run_sync(close_http_client())
+
+
+def _run_sync(coro):
+    """Run an async coroutine from sync code.
+
+    This enables Flask/Django and other sync frameworks to use the library.
+    For new code, prefer async/await syntax.
+
+    Args:
+        coro: A coroutine to run
+
+    Returns:
+        The result of the coroutine
+
+    Raises:
+        RuntimeError: If called from within an async context
+    """
+    if not asyncio.iscoroutine(coro):
+        return coro
+
+    try:
+        asyncio.get_running_loop()
+        raise RuntimeError(
+            "Cannot run async code from within an async context. "
+            "Use 'await' instead of the _sync() wrapper."
+        )
+    except RuntimeError as e:
+        if "no running event loop" in str(e):
+            return asyncio.run(coro)
+        raise
 
 
 ACCEPT_HEADERS = {
