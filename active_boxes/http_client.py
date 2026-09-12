@@ -125,7 +125,7 @@ class AsyncHTTPClient:
 
                 try:
                     return await resp.json()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - any decode failure
                     raise NotAnActivityError(f"{url} is not JSON: {e}")
 
         except aiohttp.ClientConnectorError as e:
@@ -134,7 +134,7 @@ class AsyncHTTPClient:
             )
         except asyncio.TimeoutError:
             raise ActivityUnavailableError(f"unable to fetch {url}, timeout")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - normalize all fetch failures
             raise ActivityUnavailableError(
                 f"unable to fetch {url}, unknown error: {e}"
             )
@@ -184,7 +184,7 @@ class AsyncHTTPClient:
             )
         except asyncio.TimeoutError:
             raise ActivityUnavailableError(f"unable to POST to {url}, timeout")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - normalize all POST failures
             raise ActivityUnavailableError(
                 f"unable to POST to {url}, unknown error: {e}"
             )

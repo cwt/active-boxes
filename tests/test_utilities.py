@@ -352,7 +352,7 @@ def test_format_datetime_function():
     assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
 
     # Test with naive datetime (should raise ValueError)
-    dt_naive = datetime(2023, 1, 1, 12, 0, 0)
+    dt_naive = datetime(2023, 1, 1, 12, 0, 0)  # noqa: DTZ001
     with pytest.raises(ValueError, match="datetime must be tz aware"):
         ap.format_datetime(dt_naive)
 

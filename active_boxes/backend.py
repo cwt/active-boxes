@@ -189,7 +189,7 @@ class Backend(abc.ABC):
             raise
         except ActivityUnavailableError:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - normalize all fetch failures
             raise ActivityUnavailableError(
                 f"unable to fetch {iri}, unknown error: {e}"
             )

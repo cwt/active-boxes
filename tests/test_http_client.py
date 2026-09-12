@@ -401,10 +401,12 @@ class TestAsyncHTTPClient:
             mock_cm.__aenter__.return_value = mock_resp
             mock_cm.__aexit__.return_value = None
 
-            with mock.patch.object(session, "get", return_value=mock_cm):
-                # Note: ActivityNotFoundError gets caught and re-raised as ActivityUnavailableError
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/missing")
+            # Note: ActivityNotFoundError gets caught and re-raised as ActivityUnavailableError
+            with (
+                mock.patch.object(session, "get", return_value=mock_cm),
+                pytest.raises(ap.ActivityUnavailableError),
+            ):
+                await client.get_json("https://example.com/missing")
 
             await client.close()
 
@@ -422,10 +424,12 @@ class TestAsyncHTTPClient:
             mock_cm.__aenter__.return_value = mock_resp
             mock_cm.__aexit__.return_value = None
 
-            with mock.patch.object(session, "get", return_value=mock_cm):
-                # Note: ActivityGoneError gets caught and re-raised as ActivityUnavailableError
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/gone")
+            # Note: ActivityGoneError gets caught and re-raised as ActivityUnavailableError
+            with (
+                mock.patch.object(session, "get", return_value=mock_cm),
+                pytest.raises(ap.ActivityUnavailableError),
+            ):
+                await client.get_json("https://example.com/gone")
 
             await client.close()
 
@@ -439,9 +443,11 @@ class TestAsyncHTTPClient:
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 500
 
-            with mock.patch.object(session, "get", return_value=mock_cm):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/error")
+            with (
+                mock.patch.object(session, "get", return_value=mock_cm),
+                pytest.raises(ap.ActivityUnavailableError),
+            ):
+                await client.get_json("https://example.com/error")
 
             await client.close()
 
@@ -455,9 +461,11 @@ class TestAsyncHTTPClient:
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 502
 
-            with mock.patch.object(session, "get", return_value=mock_cm):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/error")
+            with (
+                mock.patch.object(session, "get", return_value=mock_cm),
+                pytest.raises(ap.ActivityUnavailableError),
+            ):
+                await client.get_json("https://example.com/error")
 
             await client.close()
 
@@ -471,9 +479,11 @@ class TestAsyncHTTPClient:
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 503
 
-            with mock.patch.object(session, "get", return_value=mock_cm):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/error")
+            with (
+                mock.patch.object(session, "get", return_value=mock_cm),
+                pytest.raises(ap.ActivityUnavailableError),
+            ):
+                await client.get_json("https://example.com/error")
 
             await client.close()
 
@@ -491,10 +501,12 @@ class TestAsyncHTTPClient:
                 side_effect=Exception("Invalid JSON")
             )
 
-            with mock.patch.object(session, "get", return_value=mock_cm):
-                # Note: NotAnActivityError gets caught and re-raised as ActivityUnavailableError
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/invalid")
+            # Note: NotAnActivityError gets caught and re-raised as ActivityUnavailableError
+            with (
+                mock.patch.object(session, "get", return_value=mock_cm),
+                pytest.raises(ap.ActivityUnavailableError),
+            ):
+                await client.get_json("https://example.com/invalid")
 
             await client.close()
 

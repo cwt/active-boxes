@@ -28,7 +28,11 @@ def hashtagify(content: str) -> tuple[str, list[dict[str, str]]]:
         tag = hashtag[1:]
         link = f'<a href="{base_url}/tags/{tag}" class="mention hashtag" rel="tag">#<span>{tag}</span></a>'
         tags.append(
-            dict(href=f"{base_url}/tags/{tag}", name=hashtag, type="Hashtag")
+            {
+                "href": f"{base_url}/tags/{tag}",
+                "name": hashtag,
+                "type": "Hashtag",
+            }
         )
         content = content.replace(hashtag, link)
     return content, tags
@@ -44,7 +48,7 @@ def mentionify(
             # FIXME(tsileo): raise an error?
             continue
         p = get_backend().fetch_iri_sync(actor_url)
-        tags.append(dict(type="Mention", href=p["id"], name=mention))
+        tags.append({"type": "Mention", "href": p["id"], "name": mention})
 
         d = f"@{domain}"
         if hide_domain:

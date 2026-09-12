@@ -6,7 +6,7 @@ import weakref
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Union
+from typing import Any, ClassVar, Union
 
 from .backend import Backend
 from .errors import (
@@ -419,7 +419,7 @@ class BaseActivity(metaclass=_ActivityMeta):
         None  # the ActivityTypeEnum the class will represent
     )
     OBJECT_REQUIRED = False  # Whether the object field is required or note
-    ALLOWED_OBJECT_TYPES: list[ActivityType] = []
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = []
     ACTOR_REQUIRED = True  # Most of the object requires an actor, so this flag in on by default
     TARGET_REQUIRED = False  # Whether the target field is required
 
@@ -637,7 +637,7 @@ class BaseActivity(metaclass=_ActivityMeta):
             actor = backend.fetch_iri_sync(obj_id)
         except (ActivityGoneError, ActivityNotFoundError):
             raise
-        except Exception:
+        except Exception:  # noqa: BLE001 - any fetch failure is a bad activity
             raise BadActivityError(f"failed to validate actor {obj!r}")
 
         if not actor or "id" not in actor:
@@ -662,7 +662,7 @@ class BaseActivity(metaclass=_ActivityMeta):
         elif isinstance(self._data["object"], str):
             return self._data["object"]
         else:
-            raise ValueError("invalid object")
+            raise TypeError("invalid object")
 
     async def get_object(self) -> "BaseActivity":
         """Returns the object as a BaseActivity instance (async)."""
@@ -984,7 +984,7 @@ class Follow(BaseActivity):
 
 class Accept(BaseActivity):
     ACTIVITY_TYPE = ActivityType.ACCEPT
-    ALLOWED_OBJECT_TYPES = [ActivityType.FOLLOW]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [ActivityType.FOLLOW]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
@@ -994,7 +994,7 @@ class Accept(BaseActivity):
 
 class Reject(BaseActivity):
     ACTIVITY_TYPE = ActivityType.REJECT
-    ALLOWED_OBJECT_TYPES = [ActivityType.FOLLOW]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [ActivityType.FOLLOW]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
@@ -1004,7 +1004,7 @@ class Reject(BaseActivity):
 
 class Undo(BaseActivity):
     ACTIVITY_TYPE = ActivityType.UNDO
-    ALLOWED_OBJECT_TYPES = [
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [
         ActivityType.FOLLOW,
         ActivityType.LIKE,
         ActivityType.ANNOUNCE,
@@ -1132,9 +1132,8 @@ class Create(BaseActivity):
     def is_public(self) -> bool:
         """Returns True if the activity is addressed to the special "public" collection."""
         for field in ["to", "cc", "bto", "bcc"]:
-            if field in self._data:
-                if AS_PUBLIC in _to_list(self._data[field]):
-                    return True
+            if field in self._data and AS_PUBLIC in _to_list(self._data[field]):
+                return True
 
         return False
 
@@ -1259,7 +1258,7 @@ class Join(BaseActivity):
     """
 
     ACTIVITY_TYPE = ActivityType.JOIN
-    ALLOWED_OBJECT_TYPES = [ActivityType.GROUP]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [ActivityType.GROUP]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
@@ -1274,7 +1273,7 @@ class Leave(BaseActivity):
     """
 
     ACTIVITY_TYPE = ActivityType.LEAVE
-    ALLOWED_OBJECT_TYPES = [ActivityType.GROUP]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [ActivityType.GROUP]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
@@ -1307,7 +1306,7 @@ class Listen(BaseActivity):
     """
 
     ACTIVITY_TYPE = ActivityType.LISTEN
-    ALLOWED_OBJECT_TYPES = [ActivityType.AUDIO]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [ActivityType.AUDIO]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
@@ -1363,7 +1362,7 @@ class Travel(BaseActivity):
     """
 
     ACTIVITY_TYPE = ActivityType.TRAVEL
-    ALLOWED_OBJECT_TYPES = [ActivityType.PLACE]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [ActivityType.PLACE]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
     TARGET_REQUIRED = False
@@ -1379,7 +1378,10 @@ class Arrive(BaseActivity):
     """
 
     ACTIVITY_TYPE = ActivityType.ARRIVE
-    ALLOWED_OBJECT_TYPES = [ActivityType.PLACE, ActivityType.EVENT]
+    ALLOWED_OBJECT_TYPES: ClassVar[list[ActivityType]] = [
+        ActivityType.PLACE,
+        ActivityType.EVENT,
+    ]
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
@@ -1437,9 +1439,11 @@ class Note(BaseActivity):
         if self.tag is not None:
             for tag in self.tag:
                 try:
-                    if tag["type"] == ActivityType.MENTION.value:
-                        if tag["href"] == actor_id:
-                            return True
+                    if (
+                        tag["type"] == ActivityType.MENTION.value
+                        and tag["href"] == actor_id
+                    ):
+                        return True
                 except Exception:
                     logger.exception(f"invalid tag {tag!r}")
 

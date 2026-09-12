@@ -34,7 +34,7 @@ def test_format_datetime():
     assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
 
     # Test with naive datetime (should raise ValueError)
-    dt = datetime(2023, 1, 1, 12, 0, 0)
+    dt = datetime(2023, 1, 1, 12, 0, 0)  # noqa: DTZ001
     with pytest.raises(ValueError):
         ap.format_datetime(dt)
 
@@ -249,7 +249,7 @@ def test_get_object_id_exceptions(backend):
     # Reset the cached object to make sure we're testing the direct access
     activity._BaseActivity__obj = None
 
-    with pytest.raises(ValueError, match="invalid object"):
+    with pytest.raises(TypeError, match="invalid object"):
         activity.get_object_id()
 
 
@@ -309,7 +309,7 @@ def test_format_datetime_exceptions():
     from datetime import datetime
 
     # Test with naive datetime (should raise ValueError)
-    dt = datetime(2023, 1, 1, 12, 0, 0)
+    dt = datetime(2023, 1, 1, 12, 0, 0)  # noqa: DTZ001
     with pytest.raises(ValueError, match="datetime must be tz aware"):
         ap.format_datetime(dt)
 
@@ -524,7 +524,7 @@ def test_validate_actor_exceptions():
     # Test with backend that raises other exception (should become BadActivityError)
     class MockOtherErrorBackend:
         def fetch_iri_sync(self, iri):
-            raise Exception("Other error")
+            raise Exception("Other error")  # noqa: TRY002
 
     ap.use_backend(MockOtherErrorBackend())
     with pytest.raises(BadActivityError, match="failed to validate actor"):
@@ -570,7 +570,7 @@ def test_get_object_id_method():
     create_dict._data["object"] = 123
     # Reset cached object
     create_dict._BaseActivity__obj = None
-    with pytest.raises(ValueError, match="invalid object"):
+    with pytest.raises(TypeError, match="invalid object"):
         create_dict.get_object_id()
 
     # Restore backend
@@ -738,7 +738,7 @@ def test_format_datetime_edge_cases():
     assert ap.format_datetime(dt) == "2023-01-01T12:00:00Z"
 
     # Test with naive datetime (should raise ValueError)
-    dt = datetime(2023, 1, 1, 12, 0, 0)
+    dt = datetime(2023, 1, 1, 12, 0, 0)  # noqa: DTZ001
     with pytest.raises(ValueError, match="datetime must be tz aware"):
         ap.format_datetime(dt)
 

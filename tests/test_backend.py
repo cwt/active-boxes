@@ -1,4 +1,5 @@
 import json
+from typing import ClassVar
 from unittest import mock
 
 import pytest
@@ -21,15 +22,15 @@ def track_call(f):
 class InMemBackend(Backend):
     """In-memory backend meant to be used for the test suite."""
 
-    DB: dict[str, dict[str, list]] = {}
-    USERS: dict[str, ap.Person] = {}
-    FETCH_MOCK: dict[str, ap.ObjectType] = {}
-    INBOX_IDX: dict[str, dict] = {}
-    OUTBOX_IDX: dict[str, dict] = {}
-    FOLLOWERS: dict[str, list] = {}
-    FOLLOWING: dict[str, list] = {}
+    DB: ClassVar[dict[str, dict[str, list]]] = {}
+    USERS: ClassVar[dict[str, ap.Person]] = {}
+    FETCH_MOCK: ClassVar[dict[str, ap.ObjectType]] = {}
+    INBOX_IDX: ClassVar[dict[str, dict]] = {}
+    OUTBOX_IDX: ClassVar[dict[str, dict]] = {}
+    FOLLOWERS: ClassVar[dict[str, list]] = {}
+    FOLLOWING: ClassVar[dict[str, list]] = {}
 
-    _METHOD_CALLS: dict[str, list] = {}
+    _METHOD_CALLS: ClassVar[dict[str, list]] = {}
 
     def called_methods(self, p: ap.Person) -> list[str]:
         data = list(self._METHOD_CALLS[p.id])
@@ -57,7 +58,7 @@ class InMemBackend(Backend):
                     f(calls[i][1][z + 1])
                 except AssertionError as ae:
                     ae.args = ((error_msg),)
-                    raise ae
+                    raise
 
         if len(asserts) < len(calls):
             raise ValueError(
