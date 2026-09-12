@@ -8,13 +8,12 @@ import pytest
 import requests
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
-from active_boxes import httpsig
-from active_boxes import linked_data_sig
+from active_boxes import httpsig, linked_data_sig
 from active_boxes.errors import ActivityGoneError, ActivityNotFoundError
 from active_boxes.key import Key
-
-from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -252,11 +251,11 @@ def test_verify_request_no_signature(mock_parse_sig_header):
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig.get_verification_key")
 @mock.patch("active_boxes.httpsig._verify_h")
 def test_verify_request_success(
     mock_verify_h,
-    mock_get_public_key,
+    mock_get_verification_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -266,7 +265,7 @@ def test_verify_request_success(
         "signature": "SGVsbG8gV29ybGQh",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.return_value = mock.Mock()
+    mock_get_verification_key.return_value = (mock.Mock(), "rsa")
     mock_verify_h.return_value = True
 
     result = httpsig.verify_request_sync(
@@ -277,9 +276,9 @@ def test_verify_request_success(
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig.get_verification_key")
 def test_verify_request_activity_gone_error(
-    mock_get_public_key,
+    mock_get_verification_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -289,7 +288,7 @@ def test_verify_request_activity_gone_error(
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.side_effect = ActivityGoneError("Gone")
+    mock_get_verification_key.side_effect = ActivityGoneError("Gone")
 
     result = httpsig.verify_request_sync(
         "GET", "/test", {"Signature": "dummy"}, b""
@@ -299,9 +298,9 @@ def test_verify_request_activity_gone_error(
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig.get_verification_key")
 def test_verify_request_activity_not_found_error(
-    mock_get_public_key,
+    mock_get_verification_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -311,7 +310,7 @@ def test_verify_request_activity_not_found_error(
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.side_effect = ActivityNotFoundError("Not found")
+    mock_get_verification_key.side_effect = ActivityNotFoundError("Not found")
 
     result = httpsig.verify_request_sync(
         "GET", "/test", {"Signature": "dummy"}, b""
@@ -474,7 +473,7 @@ def test_linked_data_sig(mock_loader):
             "document": IDENTITY_CONTEXT,
         }
 
-        DOC = """{"type": "Create", "actor": "https://microblog.pub", "object": {"type": "Note", "sensitive": false, "cc": ["https://microblog.pub/followers"], "to": ["https://www.w3.org/ns/activitystreams#Public"], "content": "<p>Hello world!</p>", "tag": [], "source": {"mediaType": "text/markdown", "content": "Hello world!"}, "attributedTo": "https://microblog.pub", "published": "2018-05-21T15:51:59Z", "id": "https://microblog.pub/outbox/988179f13c78b3a7/activity", "url": "https://microblog.pub/note/988179f13c78b3a7", "replies": {"type": "OrderedCollection", "totalItems": 0, "first": "https://microblog.pub/outbox/988179f13c78b3a7/replies?page=first", "id": "https://microblog.pub/outbox/988179f13c78b3a7/replies"}, "likes": {"type": "OrderedCollection", "totalItems": 2, "first": "https://microblog.pub/outbox/988179f13c78b3a7/likes?page=first", "id": "https://microblog.pub/outbox/988179f13c78b3a7/likes"}, "shares": {"type": "OrderedCollection", "totalItems": 3, "first": "https://microblog.pub/outbox/988179f13c78b3a7/shares?page=first", "id": "https://microblog.pub/outbox/988179f13c78b3a7/shares"}}, "@context": ["https://www.w3.org/ns/activitystreams", "https://w3id.org/security/v1", {"Hashtag": "as:Hashtag", "sensitive": "as:sensitive"}], "published": "2018-05-21T15:51:59Z", "to": ["https://www.w3.org/ns/activitystreams#Public"], "cc": ["https://microblog.pub/followers"], "id": "https://microblog.pub/outbox/988179f13c78b3a7"}"""  # noqa: E501
+        DOC = """{"type": "Create", "actor": "https://microblog.pub", "object": {"type": "Note", "sensitive": false, "cc": ["https://microblog.pub/followers"], "to": ["https://www.w3.org/ns/activitystreams#Public"], "content": "<p>Hello world!</p>", "tag": [], "source": {"mediaType": "text/markdown", "content": "Hello world!"}, "attributedTo": "https://microblog.pub", "published": "2018-05-21T15:51:59Z", "id": "https://microblog.pub/outbox/988179f13c78b3a7/activity", "url": "https://microblog.pub/note/988179f13c78b3a7", "replies": {"type": "OrderedCollection", "totalItems": 0, "first": "https://microblog.pub/outbox/988179f13c78b3a7/replies?page=first", "id": "https://microblog.pub/outbox/988179f13c78b3a7/replies"}, "likes": {"type": "OrderedCollection", "totalItems": 2, "first": "https://microblog.pub/outbox/988179f13c78b3a7/likes?page=first", "id": "https://microblog.pub/outbox/988179f13c78b3a7/likes"}, "shares": {"type": "OrderedCollection", "totalItems": 3, "first": "https://microblog.pub/outbox/988179f13c78b3a7/shares?page=first", "id": "https://microblog.pub/outbox/988179f13c78b3a7/shares"}}, "@context": ["https://www.w3.org/ns/activitystreams", "https://w3id.org/security/v1", {"Hashtag": "as:Hashtag", "sensitive": "as:sensitive"}], "published": "2018-05-21T15:51:59Z", "to": ["https://www.w3.org/ns/activitystreams#Public"], "cc": ["https://microblog.pub/followers"], "id": "https://microblog.pub/outbox/988179f13c78b3a7"}"""
 
         doc = json.loads(DOC)
 

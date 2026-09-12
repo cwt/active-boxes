@@ -1,6 +1,8 @@
 import logging
 
 import pytest
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
 from active_boxes.collection import (
     CollectionPage,
@@ -8,10 +10,10 @@ from active_boxes.collection import (
     parse_collection,
     parse_collection_sync,
 )
-from active_boxes.errors import RecursionLimitExceededError
-from active_boxes.errors import UnexpectedActivityTypeError
-
-from test_backend import InMemBackend
+from active_boxes.errors import (
+    RecursionLimitExceededError,
+    UnexpectedActivityTypeError,
+)
 
 logging.basicConfig(level=logging.DEBUG)
 

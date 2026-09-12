@@ -8,15 +8,17 @@ import abc
 import asyncio
 import binascii
 import os
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from .http_client import check_url, get_http_client
 from .__version__ import __version__
 from .collection import parse_collection
-from .errors import ActivityGoneError
-from .errors import ActivityNotFoundError
-from .errors import ActivityUnavailableError
-from .errors import NotAnActivityError
+from .errors import (
+    ActivityGoneError,
+    ActivityNotFoundError,
+    ActivityUnavailableError,
+    NotAnActivityError,
+)
+from .http_client import check_url, get_http_client
 from .urlutils import URLLookupFailedError
 
 if TYPE_CHECKING:
@@ -83,7 +85,7 @@ class Backend(abc.ABC):
         """Generate a random object ID."""
         return binascii.hexlify(os.urandom(8)).decode("utf-8")
 
-    async def fetch_json(self, url: str, **kwargs) -> Dict[str, Any]:
+    async def fetch_json(self, url: str, **kwargs) -> dict[str, Any]:
         """Fetch JSON from a URL (async).
 
         Args:
@@ -105,7 +107,7 @@ class Backend(abc.ABC):
         resp = await client.get_json(url, headers=headers, **kwargs)
         return resp
 
-    def fetch_json_sync(self, url: str, **kwargs) -> Dict[str, Any]:
+    def fetch_json_sync(self, url: str, **kwargs) -> dict[str, Any]:
         """Fetch JSON from a URL (sync wrapper).
 
         For async code, use await fetch_json() instead.
@@ -114,9 +116,9 @@ class Backend(abc.ABC):
 
     def parse_collection(
         self,
-        payload: Optional[Dict[str, Any]] = None,
-        url: Optional[str] = None,
-    ) -> List[Any]:
+        payload: dict[str, Any] | None = None,
+        url: str | None = None,
+    ) -> list[Any]:
         """Parse a Collection/OrderedCollection (sync)."""
         from .collection import parse_collection_sync
 
@@ -126,15 +128,15 @@ class Backend(abc.ABC):
 
     async def parse_collection_async(
         self,
-        payload: Optional[Dict[str, Any]] = None,
-        url: Optional[str] = None,
-    ) -> List[Any]:
+        payload: dict[str, Any] | None = None,
+        url: str | None = None,
+    ) -> list[Any]:
         """Parse a Collection/OrderedCollection (async)."""
         return await parse_collection(
             payload=payload, url=url, fetcher=self.fetch_iri
         )
 
-    def extra_inboxes(self) -> List[str]:
+    def extra_inboxes(self) -> list[str]:
         """Return extra inboxes for every activity delivery.
 
         Override to add additional recipients (e.g., shared inboxes).
@@ -150,7 +152,6 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def base_url(self) -> str:
         """Return the application's base URL."""
-        pass
 
     async def fetch_iri(self, iri: str, **kwargs) -> "ap.ObjectType":
         """Fetch an IRI/URL and return parsed ActivityPub object (async).
@@ -203,12 +204,10 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def activity_url(self, obj_id: str) -> str:
         """Return URL for an activity with the given ID."""
-        pass
 
     @abc.abstractmethod
     def note_url(self, obj_id: str) -> str:
         """Return URL for a note with the given ID."""
-        pass
 
 
 class AsyncBackend(Backend):
@@ -218,15 +217,15 @@ class AsyncBackend(Backend):
     Apps can subclass this for a ready-to-use async backend.
     """
 
-    async def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
+    async def get_json(self, url: str, **kwargs) -> dict[str, Any]:
         """Fetch JSON using the global HTTP client (async)."""
         return await self.fetch_json(url, **kwargs)
 
     async def post_json(
         self,
         url: str,
-        data: Dict[str, Any],
-        headers: Optional[Dict[str, str]] = None,
+        data: dict[str, Any],
+        headers: dict[str, str] | None = None,
     ) -> Any:
         """POST JSON to a URL (async).
 

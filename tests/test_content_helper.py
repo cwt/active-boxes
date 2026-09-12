@@ -1,10 +1,10 @@
 import logging
 from unittest import mock
 
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
 from active_boxes import content_helper
-
-from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
 

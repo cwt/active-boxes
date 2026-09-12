@@ -1,23 +1,21 @@
 """Core ActivityPub functionality tests."""
 
 import logging
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
 from active_boxes.errors import (
-    BadActivityError,
-    UnexpectedActivityTypeError,
-    Error,
     ActivityGoneError,
     ActivityNotFoundError,
-    NotAnActivityError,
     ActivityUnavailableError,
+    BadActivityError,
+    Error,
+    NotAnActivityError,
+    UnexpectedActivityTypeError,
 )
-
-from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -729,7 +727,7 @@ def test_object_validation_edge_cases():
 
 def test_format_datetime_edge_cases():
     """Test format_datetime with various edge cases."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
     # Test with timezone aware datetime with microseconds
     dt = datetime(2023, 1, 1, 12, 0, 0, 123456, tzinfo=timezone.utc)
@@ -1226,7 +1224,7 @@ def test_base_activity_recipients_exceptions():
     }
 
     # Mock the extra_inboxes method to avoid key errors
-    mock_back.extra_inboxes = lambda: []
+    mock_back.extra_inboxes = list
 
     # Test with recipients that raise exceptions
     activity_data = {

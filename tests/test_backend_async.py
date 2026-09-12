@@ -1,7 +1,8 @@
 """Tests for backend module."""
 
-import pytest
 from unittest import mock
+
+import pytest
 
 from active_boxes.backend import AsyncBackend, Backend
 

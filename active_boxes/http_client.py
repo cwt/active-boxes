@@ -7,19 +7,21 @@ replacing the synchronous requests-based implementation.
 import asyncio
 import base64
 import hashlib
+import hmac
 import logging
+import re
 import time
 from typing import Any
-from typing import Dict
-from typing import Optional
 
 import aiohttp
 
 from .__version__ import __version__
-from .errors import ActivityGoneError
-from .errors import ActivityNotFoundError
-from .errors import ActivityUnavailableError
-from .errors import NotAnActivityError
+from .errors import (
+    ActivityGoneError,
+    ActivityNotFoundError,
+    ActivityUnavailableError,
+    NotAnActivityError,
+)
 from .urlutils import check_url as sync_check_url
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,7 @@ class AsyncHTTPClient:
 
     def __init__(self, timeout: int = 15) -> None:
         self.timeout = timeout
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -79,9 +81,9 @@ class AsyncHTTPClient:
     async def get_json(
         self,
         url: str,
-        headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        headers: dict[str, str] | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """Fetch JSON from a URL.
 
         Args:
@@ -140,9 +142,9 @@ class AsyncHTTPClient:
     async def post_json(
         self,
         url: str,
-        data: Dict[str, Any],
-        headers: Optional[Dict[str, str]] = None,
-        timeout: Optional[int] = None,
+        data: dict[str, Any],
+        headers: dict[str, str] | None = None,
+        timeout: int | None = None,
     ) -> aiohttp.ClientResponse:
         """POST JSON to a URL.
 
@@ -190,9 +192,9 @@ class AsyncHTTPClient:
 
 async def fetch_json(
     url: str,
-    user_agent: Optional[str] = None,
+    user_agent: str | None = None,
     timeout: int = 15,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fetch JSON from a URL (async).
 
     Args:
@@ -220,9 +222,9 @@ async def fetch_json(
 
 def fetch_json_sync(
     url: str,
-    user_agent: Optional[str] = None,
+    user_agent: str | None = None,
     timeout: int = 15,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fetch JSON from a URL (sync wrapper).
 
     For async code, use await fetch_json() instead.
@@ -240,9 +242,9 @@ def fetch_json_sync(
 
 async def fetch_activity(
     url: str,
-    user_agent: Optional[str] = None,
+    user_agent: str | None = None,
     timeout: int = 15,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fetch an ActivityPub activity/object from a URL (async).
 
     Args:
@@ -258,9 +260,9 @@ async def fetch_activity(
 
 def fetch_activity_sync(
     url: str,
-    user_agent: Optional[str] = None,
+    user_agent: str | None = None,
     timeout: int = 15,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fetch an ActivityPub activity/object from a URL (sync wrapper).
 
     For async code, use await fetch_activity() instead.
@@ -279,7 +281,7 @@ def fetch_activity_sync(
 
 
 def verify_date_header(
-    date_str: Optional[str], max_age_seconds: int = 300
+    date_str: str | None, max_age_seconds: int = 300
 ) -> bool:
     """Verify Date header for replay attack prevention.
 
@@ -319,7 +321,66 @@ def compute_digest(body: str) -> str:
     return "SHA-256=" + base64.b64encode(h.digest()).decode("utf-8")
 
 
-_http_client: Optional[AsyncHTTPClient] = None
+def compute_content_digest(body: str | bytes) -> str:
+    """Compute an RFC 9530 Content-Digest header value.
+
+    Args:
+        body: Request body as string or bytes
+
+    Returns:
+        Content-Digest value, e.g. ``sha-256=:abc...=:``
+    """
+    raw = body.encode("utf-8") if isinstance(body, str) else body
+    digest = hashlib.sha256(raw).digest()
+    return f"sha-256=:{base64.b64encode(digest).decode('ascii')}:"
+
+
+def verify_content_digest(
+    body: str | bytes | None, header_value: str | None
+) -> bool:
+    """Verify a body against an RFC 9530 Content-Digest header."""
+    if not header_value:
+        return False
+    raw = (
+        b""
+        if body is None
+        else (body.encode("utf-8") if isinstance(body, str) else body)
+    )
+    for item in header_value.split(","):
+        item = item.strip()
+        match = re.match(r"^([a-z0-9-]+)=:([A-Za-z0-9+/=]+):$", item)
+        if not match:
+            continue
+        alg, b64 = match.group(1).lower(), match.group(2)
+        if alg == "sha-256":
+            expected = base64.b64encode(hashlib.sha256(raw).digest()).decode()
+            if hmac.compare_digest(expected, b64):
+                return True
+        elif alg == "sha-512":
+            expected = base64.b64encode(hashlib.sha512(raw).digest()).decode()
+            if hmac.compare_digest(expected, b64):
+                return True
+    return False
+
+
+def verify_digest_header(
+    body: str | bytes | None, header_value: str | None
+) -> bool:
+    """Verify a body against a legacy RFC 3230 Digest header."""
+    if not header_value:
+        return False
+    raw = (
+        b""
+        if body is None
+        else (body.encode("utf-8") if isinstance(body, str) else body)
+    )
+    expected = (
+        "SHA-256=" + base64.b64encode(hashlib.sha256(raw).digest()).decode()
+    )
+    return hmac.compare_digest(expected.lower(), header_value.strip().lower())
+
+
+_http_client: AsyncHTTPClient | None = None
 
 
 async def get_http_client() -> AsyncHTTPClient:
@@ -429,7 +490,7 @@ def build_csp_header(
     base_url: str,
     include_webfinger: bool = True,
     include_stream: bool = True,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Build Content Security Policy headers for ActivityPub.
 
     Args:
@@ -469,7 +530,7 @@ def build_activity_headers(
     base_url: str,
     content_type: str = "activity",
     accept_type: str = "activity",
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Build standard headers for ActivityPub requests/responses.
 
     Args:

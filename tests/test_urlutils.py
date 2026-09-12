@@ -1,6 +1,7 @@
 from unittest import mock
 
 import pytest
+
 from active_boxes import urlutils
 
 

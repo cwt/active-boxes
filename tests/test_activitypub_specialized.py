@@ -2,9 +2,9 @@
 
 import logging
 
-from active_boxes import activitypub as ap
-
 from test_backend import InMemBackend
+
+from active_boxes import activitypub as ap
 
 logging.basicConfig(level=logging.DEBUG)
 

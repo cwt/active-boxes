@@ -6,12 +6,12 @@ import pytest
 import requests
 from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
 from active_boxes import httpsig
 from active_boxes.errors import ActivityGoneError, ActivityNotFoundError
 from active_boxes.key import Key
-
-from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -245,11 +245,11 @@ def test_verify_request_no_signature(mock_parse_sig_header):
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig.get_verification_key")
 @mock.patch("active_boxes.httpsig._verify_h")
 def test_verify_request_success(
     mock_verify_h,
-    mock_get_public_key,
+    mock_get_verification_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -260,7 +260,7 @@ def test_verify_request_success(
         "signature": "SGVsbG8gV29ybGQh",  # "Hello World!" base64 encoded
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.return_value = mock.Mock()
+    mock_get_verification_key.return_value = (mock.Mock(), "rsa")
     mock_verify_h.return_value = True
 
     result = httpsig.verify_request_sync(
@@ -271,9 +271,9 @@ def test_verify_request_success(
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig.get_verification_key")
 def test_verify_request_activity_gone_error(
-    mock_get_public_key,
+    mock_get_verification_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -284,7 +284,7 @@ def test_verify_request_activity_gone_error(
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.side_effect = ActivityGoneError("Gone")
+    mock_get_verification_key.side_effect = ActivityGoneError("Gone")
 
     result = httpsig.verify_request_sync(
         "GET", "/test", {"Signature": "dummy"}, b""
@@ -294,9 +294,9 @@ def test_verify_request_activity_gone_error(
 
 @mock.patch("active_boxes.httpsig._parse_sig_header")
 @mock.patch("active_boxes.httpsig._build_signed_string")
-@mock.patch("active_boxes.httpsig._get_public_key")
+@mock.patch("active_boxes.httpsig.get_verification_key")
 def test_verify_request_activity_not_found_error(
-    mock_get_public_key,
+    mock_get_verification_key,
     mock_build_signed_string,
     mock_parse_sig_header,
 ):
@@ -307,7 +307,7 @@ def test_verify_request_activity_not_found_error(
         "signature": "abc123",
     }
     mock_build_signed_string.return_value = "signed_string"
-    mock_get_public_key.side_effect = ActivityNotFoundError("Not found")
+    mock_get_verification_key.side_effect = ActivityNotFoundError("Not found")
 
     result = httpsig.verify_request_sync(
         "GET", "/test", {"Signature": "dummy"}, b""
@@ -353,3 +353,148 @@ def test_httpsig_auth_call_with_string_body():
     assert "Date" in result
     assert "Host" in result
     assert "Signature" in result
+
+
+def test_content_digest_roundtrip():
+    body = b'{"hello": "world"}'
+    value = httpsig.compute_content_digest(body)
+    assert value.startswith("sha-256=:")
+    assert value.endswith(":")
+    assert httpsig.verify_content_digest(body, value) is True
+    assert httpsig.verify_content_digest(b"other", value) is False
+    assert httpsig.verify_content_digest(body, None) is False
+
+
+def test_digest_header_roundtrip():
+    body = '{"hello": "world"}'
+    assert (
+        httpsig.verify_digest_header(body, httpsig._body_digest(body)) is True
+    )
+    assert httpsig.verify_digest_header(body, "SHA-256=invalid") is False
+
+
+def test_parse_signature_input():
+    header = (
+        'sig1=("@method" "@target-uri" "content-digest");'
+        'created=1748341414;keyid="https://example.com/actor#main-key"'
+    )
+    parsed = httpsig.parse_signature_input(header)
+    assert parsed is not None
+    assert "sig1" in parsed
+    assert parsed["sig1"]["covered"] == [
+        "@method",
+        "@target-uri",
+        "content-digest",
+    ]
+    assert parsed["sig1"]["created"] == 1748341414
+    assert parsed["sig1"]["keyid"] == "https://example.com/actor#main-key"
+
+
+def test_rfc9421_rsa_roundtrip():
+    from active_boxes.key import Key as RSAKey
+
+    back = InMemBackend()
+    original = ap.BACKEND
+    ap.BACKEND = back
+    try:
+        key = RSAKey(
+            "https://example.com/actor", "https://example.com/actor#main-key"
+        )
+        key.new()
+        back.FETCH_MOCK["https://example.com/actor#main-key"] = {
+            "publicKey": key.to_dict(),
+            "id": "https://example.com/actor",
+            "type": "Person",
+        }
+        url = "https://remote.example/inbox"
+        body = '{"type": "Create"}'
+        headers: dict = {}
+        signed = httpsig.sign_request_rfc9421_sync(
+            "POST", url, headers, key, body
+        )
+        assert "Signature-Input" in signed
+        assert "Signature" in signed
+        assert "Content-Digest" in signed
+        assert (
+            httpsig.verify_request_rfc9421_sync("POST", url, dict(signed), body)
+            is True
+        )
+        # Tampered body must fail (digest mismatch)
+        assert (
+            httpsig.verify_request_rfc9421_sync(
+                "POST", url, dict(signed), '{"type": "Other"}'
+            )
+            is False
+        )
+    finally:
+        ap.BACKEND = original
+
+
+def test_rfc9421_ed25519_roundtrip():
+    from active_boxes.key import Ed25519Key
+
+    back = InMemBackend()
+    original = ap.BACKEND
+    ap.BACKEND = back
+    try:
+        key = Ed25519Key(
+            "https://example.com/actor", "https://example.com/actor#ed25519-key"
+        )
+        key.new()
+        back.FETCH_MOCK["https://example.com/actor#ed25519-key"] = {
+            "id": "https://example.com/actor",
+            "type": "Person",
+            "assertionMethod": [key.to_multikey()],
+        }
+        url = "https://remote.example/inbox"
+        body = '{"type": "Follow"}'
+        signed = httpsig.sign_request_rfc9421_sync("POST", url, {}, key, body)
+        assert signed["Signature-Input"].find('alg="ed25519"') != -1
+        assert (
+            httpsig.verify_request_rfc9421_sync("POST", url, dict(signed), body)
+            is True
+        )
+    finally:
+        ap.BACKEND = original
+
+
+def test_verify_request_prefers_rfc9421_with_fallback():
+    from active_boxes.key import Key as RSAKey
+
+    back = InMemBackend()
+    original = ap.BACKEND
+    ap.BACKEND = back
+    try:
+        key = RSAKey(
+            "https://example.com/actor", "https://example.com/actor#main-key"
+        )
+        key.new()
+        back.FETCH_MOCK["https://example.com/actor#main-key"] = {
+            "publicKey": key.to_dict(),
+            "id": "https://example.com/actor",
+            "type": "Person",
+        }
+        url = "https://local.example/inbox"
+        body = '{"type": "Like"}'
+        signed = httpsig.sign_request_rfc9421_sync("POST", url, {}, key, body)
+        # Unified verifier accepts full URL and dict with Signature-Input
+        assert (
+            httpsig.verify_request_sync("POST", url, dict(signed), body) is True
+        )
+        # Cavage-only request still verifies via fallback path
+        cavage_headers: dict = {
+            "user-agent": "test",
+            "host": "local.example",
+            "content-type": "application/json",
+        }
+        cavage_signed = httpsig.sign_request_sync(
+            "POST", "/inbox", cavage_headers, key, body, host="local.example"
+        )
+        assert (
+            httpsig.verify_request_sync(
+                "POST", "/inbox", dict(cavage_signed), body
+            )
+            is True
+        )
+    finally:
+        ap.BACKEND = original

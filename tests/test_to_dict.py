@@ -1,7 +1,8 @@
 """Test for to_dict method to increase code coverage."""
 
-from active_boxes import activitypub as ap
 from test_backend import InMemBackend
+
+from active_boxes import activitypub as ap
 
 
 def test_to_dict_method():

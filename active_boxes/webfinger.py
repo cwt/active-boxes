@@ -5,11 +5,10 @@ This module provides WebFinger endpoint discovery for ActivityPub actors.
 
 import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any
 from urllib.parse import urlparse
 
-from .activitypub import _await_if_coroutine
-from .activitypub import get_backend
+from .activitypub import _await_if_coroutine, get_backend
 from .urlutils import check_url
 
 logger = logging.getLogger(__name__)
@@ -47,7 +46,7 @@ def _run_sync(coro):
 
 async def webfinger(
     resource: str, debug: bool = False
-) -> Dict[str, Any] | None:
+) -> dict[str, Any] | None:
     """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL (async).
 
     Args:
@@ -65,10 +64,8 @@ async def webfinger(
     elif resource.startswith("https://"):
         host = urlparse(resource).netloc
     else:
-        if resource.startswith("acct:"):
-            resource = resource[5:]
-        if resource.startswith("@"):
-            resource = resource[1:]
+        resource = resource.removeprefix("acct:")
+        resource = resource.removeprefix("@")
         _, host = resource.split("@", 1)
         resource = "acct:" + resource
 
@@ -92,7 +89,7 @@ async def webfinger(
     return None
 
 
-def webfinger_sync(resource: str, debug: bool = False) -> Dict[str, Any] | None:
+def webfinger_sync(resource: str, debug: bool = False) -> dict[str, Any] | None:
     """Mastodon-like WebFinger resolution to retrieve the activity stream Actor URL (sync).
 
     For async code, use await webfinger() instead.

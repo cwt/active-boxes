@@ -45,7 +45,7 @@ Example usage with asyncio:
             return False  # No deduplication by default
 """
 
-from typing import List, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from .activitypub import ObjectType
 
@@ -257,7 +257,7 @@ class ActivityPubPlugin(
 
     # === Optional: Extra recipients ===
 
-    def extra_inboxes(self) -> List[str]:
+    def extra_inboxes(self) -> list[str]:
         """Return additional inbox URLs for every outgoing activity.
 
         This is called by the library when computing recipients for

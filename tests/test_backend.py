@@ -1,12 +1,10 @@
 import json
-from typing import List
-from typing import Optional
 from unittest import mock
 
 import pytest
 
 import active_boxes.activitypub as ap
-from active_boxes.backend import Backend, AsyncBackend, _run_sync
+from active_boxes.backend import AsyncBackend, Backend, _run_sync
 
 
 def track_call(f):
@@ -33,12 +31,12 @@ class InMemBackend(Backend):
 
     _METHOD_CALLS: dict[str, list] = {}
 
-    def called_methods(self, p: ap.Person) -> List[str]:
+    def called_methods(self, p: ap.Person) -> list[str]:
         data = list(self._METHOD_CALLS[p.id])
         self._METHOD_CALLS[p.id] = []
         return data
 
-    def assert_called_methods(self, p: ap.Person, *asserts) -> List[str]:
+    def assert_called_methods(self, p: ap.Person, *asserts) -> list[str]:
         calls = self.called_methods(p)
         for i, assert_data in enumerate(asserts):
             if len(calls) < i + 1:
@@ -143,7 +141,7 @@ class InMemBackend(Backend):
 
     def inbox_check_duplicate(
         self, as_actor: ap.Person, iri: str
-    ) -> Optional[ap.BaseActivity]:
+    ) -> ap.BaseActivity | None:
         for activity in self.DB[as_actor.id]["inbox"]:
             if activity.id == iri:
                 return activity
@@ -207,10 +205,10 @@ class InMemBackend(Backend):
     ) -> None:
         self.FOLLOWING[as_actor.id].remove(follow.get_object_sync().id)
 
-    def followers(self, as_actor: ap.Person) -> List[str]:
+    def followers(self, as_actor: ap.Person) -> list[str]:
         return self.FOLLOWERS[as_actor.id]
 
-    def following(self, as_actor: ap.Person) -> List[str]:
+    def following(self, as_actor: ap.Person) -> list[str]:
         return self.FOLLOWING[as_actor.id]
 
     @track_call
@@ -460,18 +458,18 @@ class TestBackendAsync:
         back = TestBackend()
 
         # Mock check_url to pass and get_http_client to raise an error
-        with mock.patch.object(back, "check_url"):
-            with mock.patch(
-                "active_boxes.backend.get_http_client"
-            ) as mock_client:
-                mock_client_instance = mock.AsyncMock()
-                mock_client_instance.get_json.side_effect = (
-                    ap.ActivityNotFoundError("Not found")
-                )
-                mock_client.return_value = mock_client_instance
+        with (
+            mock.patch.object(back, "check_url"),
+            mock.patch("active_boxes.backend.get_http_client") as mock_client,
+        ):
+            mock_client_instance = mock.AsyncMock()
+            mock_client_instance.get_json.side_effect = (
+                ap.ActivityNotFoundError("Not found")
+            )
+            mock_client.return_value = mock_client_instance
 
-                with pytest.raises(ap.ActivityNotFoundError):
-                    await back.fetch_iri("https://example.com/missing")
+            with pytest.raises(ap.ActivityNotFoundError):
+                await back.fetch_iri("https://example.com/missing")
 
     async def test_parse_collection_async(self):
         """Test async parse_collection method."""

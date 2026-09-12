@@ -1,16 +1,14 @@
 import ipaddress
 import logging
 import socket
-from typing import Dict, Union
 from urllib.parse import urlparse
 
-from .errors import Error
-from .errors import ServerError
+from .errors import Error, ServerError
 
 logger = logging.getLogger(__name__)
 
 
-_CACHE: Dict[str, bool] = {}
+_CACHE: dict[str, bool] = {}
 
 
 class InvalidURLError(ServerError):
@@ -39,9 +37,7 @@ def is_url_valid(url: str, debug: bool = False) -> bool:
     if _CACHE.get(parsed.hostname, False):
         return True
 
-    ip_address: Union[
-        str, int, ipaddress.IPv4Address, ipaddress.IPv6Address
-    ] = ""
+    ip_address: str | int | ipaddress.IPv4Address | ipaddress.IPv6Address = ""
     try:
         ip_address = ipaddress.ip_address(parsed.hostname)
     except ValueError:
@@ -78,5 +74,3 @@ def check_url(url: str, debug: bool = False) -> None:
     logger.debug(f"check_url {url} debug={debug}")
     if not is_url_valid(url, debug=debug):
         raise InvalidURLError(f'"{url}" is invalid')
-
-    return None

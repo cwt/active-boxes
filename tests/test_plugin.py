@@ -1,7 +1,9 @@
 """Tests for the ActivityPub plugin protocol."""
 
 import pytest
+from test_backend import InMemBackend
 
+from active_boxes import activitypub as ap
 from active_boxes.plugin import (
     ActivityPubPlugin,
     CollectionPlugin,
@@ -9,9 +11,6 @@ from active_boxes.plugin import (
     InboxPlugin,
     StoragePlugin,
 )
-from active_boxes import activitypub as ap
-
-from test_backend import InMemBackend
 
 
 class MinimalPlugin:

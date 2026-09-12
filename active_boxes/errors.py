@@ -1,7 +1,6 @@
 """Errors raised by this package."""
 
 from typing import Any
-from typing import Dict
 
 
 class Error(Exception):
@@ -24,7 +23,7 @@ class ServerError(Error):
         self,
         message: str,
         status_code: int | None = None,
-        payload: Dict[str, Any] | None = None,
+        payload: dict[str, Any] | None = None,
     ) -> None:
         Exception.__init__(self)
         self.message = message
@@ -32,7 +31,7 @@ class ServerError(Error):
             self.status_code = status_code
         self.payload = payload
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         rv = dict(self.payload or {})
         rv["message"] = self.message
         return rv

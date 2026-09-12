@@ -1,7 +1,7 @@
 """Tests for http_client module."""
 
 import asyncio
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 import aiohttp
@@ -33,6 +33,23 @@ def test_compute_digest():
     digest = http_client.compute_digest("test body")
     assert digest.startswith("SHA-256=")
     assert len(digest) > 10
+
+
+def test_compute_content_digest():
+    value = http_client.compute_content_digest("test body")
+    assert value.startswith("sha-256=:")
+    assert value.endswith(":")
+    assert http_client.verify_content_digest("test body", value) is True
+    assert http_client.verify_content_digest("other", value) is False
+
+
+def test_verify_digest_header():
+    body = "test body"
+    assert (
+        http_client.verify_digest_header(body, http_client.compute_digest(body))
+        is True
+    )
+    assert http_client.verify_digest_header(body, "SHA-256=invalid") is False
 
 
 def test_get_accept_header_activity():
@@ -488,15 +505,17 @@ class TestAsyncHTTPClient:
             client = http_client.AsyncHTTPClient()
             session = await client._get_session()
 
-            with mock.patch.object(
-                session,
-                "get",
-                side_effect=aiohttp.ClientConnectorError(
-                    mock.Mock(), mock.Mock()
+            with (
+                mock.patch.object(
+                    session,
+                    "get",
+                    side_effect=aiohttp.ClientConnectorError(
+                        mock.Mock(), mock.Mock()
+                    ),
                 ),
+                pytest.raises(ap.ActivityUnavailableError),
             ):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/error")
+                await client.get_json("https://example.com/error")
 
             await client.close()
 
@@ -507,11 +526,13 @@ class TestAsyncHTTPClient:
             client = http_client.AsyncHTTPClient()
             session = await client._get_session()
 
-            with mock.patch.object(
-                session, "get", side_effect=asyncio.TimeoutError()
+            with (
+                mock.patch.object(
+                    session, "get", side_effect=asyncio.TimeoutError()
+                ),
+                pytest.raises(ap.ActivityUnavailableError),
             ):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.get_json("https://example.com/timeout")
+                await client.get_json("https://example.com/timeout")
 
             await client.close()
 
@@ -595,15 +616,17 @@ class TestAsyncHTTPClient:
             client = http_client.AsyncHTTPClient()
             session = await client._get_session()
 
-            with mock.patch.object(
-                session,
-                "post",
-                side_effect=aiohttp.ClientConnectorError(
-                    mock.Mock(), mock.Mock()
+            with (
+                mock.patch.object(
+                    session,
+                    "post",
+                    side_effect=aiohttp.ClientConnectorError(
+                        mock.Mock(), mock.Mock()
+                    ),
                 ),
+                pytest.raises(ap.ActivityUnavailableError),
             ):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.post_json("https://example.com/inbox", {})
+                await client.post_json("https://example.com/inbox", {})
 
             await client.close()
 
@@ -614,11 +637,13 @@ class TestAsyncHTTPClient:
             client = http_client.AsyncHTTPClient()
             session = await client._get_session()
 
-            with mock.patch.object(
-                session, "post", side_effect=asyncio.TimeoutError()
+            with (
+                mock.patch.object(
+                    session, "post", side_effect=asyncio.TimeoutError()
+                ),
+                pytest.raises(ap.ActivityUnavailableError),
             ):
-                with pytest.raises(ap.ActivityUnavailableError):
-                    await client.post_json("https://example.com/inbox", {})
+                await client.post_json("https://example.com/inbox", {})
 
             await client.close()
 
@@ -708,8 +733,8 @@ class TestVerifyDateHeader:
 
     def test_verify_date_header_valid(self):
         """Test verify_date_header with valid recent date."""
-        from email.utils import format_datetime
         from datetime import datetime, timezone
+        from email.utils import format_datetime
 
         now = datetime.now(timezone.utc)
         date_str = format_datetime(now)
@@ -717,8 +742,8 @@ class TestVerifyDateHeader:
 
     def test_verify_date_header_expired(self):
         """Test verify_date_header with old date."""
-        from email.utils import format_datetime
         from datetime import datetime, timezone
+        from email.utils import format_datetime
 
         old = datetime.now(timezone.utc) - timedelta(hours=1)
         date_str = format_datetime(old)

@@ -1,10 +1,5 @@
-from typing import Dict
-from typing import List
-from typing import Tuple
-
-from markdown import markdown
-
 import regex as re
+from markdown import markdown
 
 from .activitypub import get_backend
 from .webfinger import get_actor_url_sync
@@ -22,7 +17,7 @@ HASHTAG_REGEX = re.compile(r"(#[\d\w]+)")
 MENTION_REGEX = re.compile(r"@[\d\w_.+-]+@[\d\w-]+\.[\d\w\-.]+")
 
 
-def hashtagify(content: str) -> Tuple[str, List[Dict[str, str]]]:
+def hashtagify(content: str) -> tuple[str, list[dict[str, str]]]:
     base_url = get_backend().base_url()
     tags = []
     hashtags = re.findall(HASHTAG_REGEX, content)
@@ -41,7 +36,7 @@ def hashtagify(content: str) -> Tuple[str, List[Dict[str, str]]]:
 
 def mentionify(
     content: str, hide_domain: bool = False
-) -> Tuple[str, List[Dict[str, str]]]:
+) -> tuple[str, list[dict[str, str]]]:
     tags = []
     for mention in re.findall(MENTION_REGEX, content):
         _, username, domain = mention.split("@")
@@ -60,7 +55,7 @@ def mentionify(
     return content, tags
 
 
-def parse_markdown(content: str) -> Tuple[str, List[Dict[str, str]]]:
+def parse_markdown(content: str) -> tuple[str, list[dict[str, str]]]:
     tags = []
     if hashtag_tags := hashtagify(content)[1]:
         content, hashtag_tags = hashtagify(content)

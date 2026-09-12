@@ -4,17 +4,17 @@ import logging
 from unittest import mock
 
 import pytest
-from active_boxes import activitypub as ap
-from active_boxes import content_helper
-from active_boxes import urlutils
-from active_boxes import webfinger
-from active_boxes.activitypub import use_backend
-from active_boxes.errors import BadActivityError
-from active_boxes.collection import parse_collection_sync
-from active_boxes.errors import RecursionLimitExceededError
-from active_boxes.errors import UnexpectedActivityTypeError
-
 from test_backend import InMemBackend
+
+from active_boxes import activitypub as ap
+from active_boxes import content_helper, urlutils, webfinger
+from active_boxes.activitypub import use_backend
+from active_boxes.collection import parse_collection_sync
+from active_boxes.errors import (
+    BadActivityError,
+    RecursionLimitExceededError,
+    UnexpectedActivityTypeError,
+)
 
 logging.basicConfig(level=logging.DEBUG)
 

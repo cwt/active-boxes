@@ -1,9 +1,10 @@
 """Additional tests for utility functions to increase code coverage."""
 
 import pytest
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
 from active_boxes.errors import BadActivityError
-from test_backend import InMemBackend
 
 
 def test_parse_activity_exceptions():

@@ -7,8 +7,9 @@ pagination via the `prev` link.
 
 import asyncio
 import inspect
-from typing import Any, AsyncIterator, Dict, List, Optional, Callable
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
+from typing import Any
 
 from .errors import RecursionLimitExceededError, UnexpectedActivityTypeError
 
@@ -17,12 +18,12 @@ from .errors import RecursionLimitExceededError, UnexpectedActivityTypeError
 class CollectionPage:
     """Represents a single page of a Collection."""
 
-    items: List[Any]
-    next_url: Optional[str] = None
-    prev_url: Optional[str] = None
-    part_of: Optional[str] = None
-    total_items: Optional[int] = None
-    id: Optional[str] = None
+    items: list[Any]
+    next_url: str | None = None
+    prev_url: str | None = None
+    part_of: str | None = None
+    total_items: int | None = None
+    id: str | None = None
     type: str = "CollectionPage"
 
 
@@ -37,7 +38,7 @@ class CollectionPaginator:
         self,
         fetcher: Callable[[str], Any],
         max_depth: int = 3,
-        page_size: Optional[int] = None,
+        page_size: int | None = None,
     ) -> None:
         """Initialize the paginator.
 
@@ -50,7 +51,7 @@ class CollectionPaginator:
         self.max_depth = max_depth
         self.page_size = page_size
 
-    async def _fetch(self, url: str) -> Dict[str, Any]:
+    async def _fetch(self, url: str) -> dict[str, Any]:
         """Fetch a URL using the async fetcher."""
         if inspect.iscoroutinefunction(self.fetcher):
             return await self.fetcher(url)
@@ -58,7 +59,7 @@ class CollectionPaginator:
             return await asyncio.to_thread(self.fetcher, url)
 
     async def get_first_page(
-        self, collection: Dict[str, Any]
+        self, collection: dict[str, Any]
     ) -> CollectionPage:
         """Get the first page of a collection.
 
@@ -99,7 +100,7 @@ class CollectionPaginator:
         )
 
     def _parse_page(
-        self, page: Dict[str, Any], part_of: Optional[str] = None
+        self, page: dict[str, Any], part_of: str | None = None
     ) -> CollectionPage:
         """Parse a collection page dict into a CollectionPage object."""
         items = page.get("orderedItems") or page.get("items") or []
@@ -122,7 +123,7 @@ class CollectionPaginator:
         return self._parse_page(data)
 
     async def iterate_forward(
-        self, collection: Dict[str, Any]
+        self, collection: dict[str, Any]
     ) -> AsyncIterator[Any]:
         """Iterate forward through all pages via `next` links.
 
@@ -144,7 +145,7 @@ class CollectionPaginator:
             depth += 1
 
     async def iterate_backward(
-        self, collection: Dict[str, Any]
+        self, collection: dict[str, Any]
     ) -> AsyncIterator[Any]:
         """Iterate backward through pages via `prev` links.
 
@@ -183,8 +184,8 @@ class CollectionPaginator:
             depth += 1
 
     async def get_all_items(
-        self, collection: Dict[str, Any], direction: str = "forward"
-    ) -> List[Any]:
+        self, collection: dict[str, Any], direction: str = "forward"
+    ) -> list[Any]:
         """Get all items from a collection.
 
         Args:
@@ -223,12 +224,12 @@ class CollectionPaginator:
 
 
 async def parse_collection(
-    payload: Optional[Dict[str, Any]] = None,
-    url: Optional[str] = None,
+    payload: dict[str, Any] | None = None,
+    url: str | None = None,
     level: int = 0,
-    fetcher: Optional[Callable[[str], Any]] = None,
+    fetcher: Callable[[str], Any] | None = None,
     max_depth: int = 3,
-) -> List[Any]:
+) -> list[Any]:
     """Resolve/fetch a Collection/OrderedCollection (async).
 
     Args:
@@ -253,7 +254,7 @@ async def parse_collection(
         async def fetch(url):
             return await asyncio.to_thread(fetcher, url)
 
-    out: List[Any] = []
+    out: list[Any] = []
     if url:
         payload = await fetch(url)
     if not payload:
@@ -312,12 +313,12 @@ async def parse_collection(
 
 
 def parse_collection_sync(
-    payload: Optional[Dict[str, Any]] = None,
-    url: Optional[str] = None,
+    payload: dict[str, Any] | None = None,
+    url: str | None = None,
     level: int = 0,
-    fetcher: Optional[Callable[[str], Any]] = None,
+    fetcher: Callable[[str], Any] | None = None,
     max_depth: int = 3,
-) -> List[Any]:
+) -> list[Any]:
     """Resolve/fetch a Collection/OrderedCollection (sync).
 
     For async code, use await parse_collection() instead.
@@ -337,7 +338,7 @@ def parse_collection_sync(
     if level > max_depth:
         raise RecursionLimitExceededError("recursion limit exceeded")
 
-    out: List[Any] = []
+    out: list[Any] = []
     if url:
         payload = fetcher(url)
     if not payload:

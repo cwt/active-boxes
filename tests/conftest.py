@@ -2,6 +2,7 @@
 
 import pytest
 from test_backend import InMemBackend
+
 import active_boxes.activitypub as ap
 
 

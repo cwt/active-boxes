@@ -2,11 +2,10 @@ import logging
 from unittest import mock
 
 import pytest
-from active_boxes import urlutils
-from active_boxes import webfinger
-from active_boxes.activitypub import use_backend
-
 from test_backend import InMemBackend
+
+from active_boxes import urlutils, webfinger
+from active_boxes.activitypub import use_backend
 
 logging.basicConfig(level=logging.DEBUG)
 

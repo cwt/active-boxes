@@ -3,6 +3,8 @@
 import logging
 
 import pytest
+from test_backend import InMemBackend
+
 from active_boxes import activitypub as ap
 from active_boxes.errors import (
     ActivityGoneError,
@@ -10,8 +12,6 @@ from active_boxes.errors import (
     ActivityUnavailableError,
     NotAnActivityError,
 )
-
-from test_backend import InMemBackend
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -1350,7 +1350,7 @@ def test_base_activity_recipients_exceptions():
     }
 
     # Mock the extra_inboxes method to avoid key errors
-    mock_back.extra_inboxes = lambda: []
+    mock_back.extra_inboxes = list
 
     # Test with recipients that raise exceptions
     activity_data = {

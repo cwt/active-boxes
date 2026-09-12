@@ -3,25 +3,21 @@
 import asyncio
 import logging
 import weakref
-from datetime import datetime
-from datetime import timezone
+from collections.abc import Sequence
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Sequence
-from typing import Type
-from typing import Union
+from typing import Any, Union
 
 from .backend import Backend
-from .errors import ActivityGoneError
-from .errors import ActivityNotFoundError
-from .errors import ActivityUnavailableError
-from .errors import BadActivityError
-from .errors import NotAnActivityError
-from .errors import Error
-from .errors import UnexpectedActivityTypeError
+from .errors import (
+    ActivityGoneError,
+    ActivityNotFoundError,
+    ActivityUnavailableError,
+    BadActivityError,
+    Error,
+    NotAnActivityError,
+    UnexpectedActivityTypeError,
+)
 from .key import Key
 
 logger = logging.getLogger(__name__)
@@ -29,7 +25,7 @@ logger = logging.getLogger(__name__)
 UninitializedBackendError = Error("a backend must be initialized")
 
 # Helper/shortcut for typing
-ObjectType = Dict[str, Any]
+ObjectType = dict[str, Any]
 ActorType = Union["Person", "Application", "Group", "Organization", "Service"]
 ObjectOrIDType = str | ObjectType
 
@@ -56,9 +52,9 @@ DEFAULT_CTX = COLLECTION_CTX = [
 ]
 
 # Will be used to keep track of all the defined activities
-_ACTIVITY_CLS: Dict["ActivityType", Type["BaseActivity"]] = {}
+_ACTIVITY_CLS: dict["ActivityType", type["BaseActivity"]] = {}
 
-BACKEND: Optional[Backend] = None
+BACKEND: Backend | None = None
 
 
 def get_backend() -> Backend:
@@ -128,7 +124,7 @@ def fetch_iri_sync(iri: str, **kwargs) -> ObjectType:
     return _run_sync(fetch_iri(iri, **kwargs))
 
 
-async def fetch_json(url: str, **kwargs) -> Dict[str, Any]:
+async def fetch_json(url: str, **kwargs) -> dict[str, Any]:
     """Fetch JSON from a URL (async).
 
     Args:
@@ -143,7 +139,7 @@ async def fetch_json(url: str, **kwargs) -> Dict[str, Any]:
     return await _await_if_coroutine(result)
 
 
-def fetch_json_sync(url: str, **kwargs) -> Dict[str, Any]:
+def fetch_json_sync(url: str, **kwargs) -> dict[str, Any]:
     """Fetch JSON from a URL (sync wrapper).
 
     For async code, use await fetch_json() instead.
@@ -342,7 +338,7 @@ def parse_activity(
             )
 
 
-def _to_list(data: List[Any] | Any) -> List[Any]:
+def _to_list(data: list[Any] | Any) -> list[Any]:
     """Helper to convert fields that can be either an object or a list of objects to a
     list of object."""
     if isinstance(data, list):
@@ -350,7 +346,7 @@ def _to_list(data: List[Any] | Any) -> List[Any]:
     return [data]
 
 
-def clean_activity(activity: ObjectType) -> Dict[str, Any]:
+def clean_activity(activity: ObjectType) -> dict[str, Any]:
     """Clean the activity before rendering it.
     - Remove the hidden bco and bcc field
     """
@@ -369,7 +365,7 @@ def _get_actor_id(actor: ObjectOrIDType) -> str:
     return actor
 
 
-def _get_id(obj) -> Optional[str]:
+def _get_id(obj) -> str | None:
     if obj is None:
         return None
     elif isinstance(obj, str):
@@ -416,23 +412,23 @@ class _ActivityMeta(type):
         return cls
 
 
-class BaseActivity(object, metaclass=_ActivityMeta):
+class BaseActivity(metaclass=_ActivityMeta):
     """Base class for ActivityPub activities."""
 
-    ACTIVITY_TYPE: Optional[ActivityType] = (
+    ACTIVITY_TYPE: ActivityType | None = (
         None  # the ActivityTypeEnum the class will represent
     )
     OBJECT_REQUIRED = False  # Whether the object field is required or note
-    ALLOWED_OBJECT_TYPES: List[ActivityType] = []
+    ALLOWED_OBJECT_TYPES: list[ActivityType] = []
     ACTOR_REQUIRED = True  # Most of the object requires an actor, so this flag in on by default
     TARGET_REQUIRED = False  # Whether the target field is required
 
-    def __init__(self, **kwargs) -> None:  # noqa: C901
+    def __init__(self, **kwargs) -> None:
         if not self.ACTIVITY_TYPE:
             raise Error("should never happen")
 
         # Initialize the dict that will contains all the activity fields
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
 
         if not kwargs.get("type"):
             self._data["type"] = self.ACTIVITY_TYPE.value
@@ -451,8 +447,8 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         # A place to set ephemeral data
         self.__ctx: Any = {}
 
-        self.__obj: Optional["BaseActivity"] = None
-        self.__actor: List[ActorType] = []
+        self.__obj: BaseActivity | None = None
+        self.__actor: list[ActorType] = []
 
         # The id may not be present for new activities
         if "id" in kwargs:
@@ -502,9 +498,11 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                 raise BadActivityError("missing target")
             target = kwargs.pop("target")
             # Basic validation: target should be a string (IRI) or dict with type
-            if isinstance(target, str):
-                self._data["target"] = target
-            elif isinstance(target, dict) and "type" in target:
+            if (
+                isinstance(target, str)
+                or isinstance(target, dict)
+                and "type" in target
+            ):
                 self._data["target"] = target
             else:
                 raise BadActivityError("invalid target")
@@ -551,9 +549,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         """Optional init callback."""
         raise NotImplementedError
 
-    def has_type(
-        self, _types: Union[ActivityType, str, List[Union[ActivityType, str]]]
-    ):
+    def has_type(self, _types: ActivityType | str | list[ActivityType | str]):
         """Return True if the activity has the given type."""
         return _has_type(self._data["type"], _types)
 
@@ -718,8 +714,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         data = dict(self._data)
         if embed:
             for k in ["@context", "signature"]:
-                if k in data:
-                    del data[k]
+                data.pop(k, None)
         if (
             data.get("object")
             and embed_object_id_only
@@ -774,17 +769,17 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         """
         return _run_sync(self.get_actor())
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return []
 
-    def recipients(self) -> List[str]:  # noqa: C901
+    def recipients(self) -> list[str]:
         _ensure_backend()
         backend = get_backend()
 
         recipients = self._recipients()
         actor_id = self.get_actor_sync().id
 
-        out: List[str] = []
+        out: list[str] = []
         if self.type == ActivityType.CREATE.value:
             out = backend.extra_inboxes()
 
@@ -878,7 +873,7 @@ class Person(BaseActivity):
         Returns:
             An OrderedCollection containing the featured activities/objects
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "id": self.featured_url(),
         }
         if count is not None:
@@ -887,7 +882,7 @@ class Person(BaseActivity):
             kwargs["first"] = first_page
         return OrderedCollection(**kwargs)
 
-    def get_streams(self) -> List[str]:
+    def get_streams(self) -> list[str]:
         """Returns the streams (supplementary collections) for this actor.
 
         The streams property contains a list of Collection URLs that are
@@ -978,7 +973,7 @@ class Follow(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return [self.get_object_sync().id]
 
     def build_undo(self) -> BaseActivity:
@@ -993,7 +988,7 @@ class Accept(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return [self.get_object_sync().get_actor_sync().id]
 
 
@@ -1003,7 +998,7 @@ class Reject(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return [self.get_object_sync().get_actor_sync().id]
 
 
@@ -1018,7 +1013,7 @@ class Undo(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE == ActivityType.FOLLOW:
             return [obj.get_object_sync().id]
@@ -1046,7 +1041,7 @@ class Like(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return [self.get_object_sync().get_actor_sync().id]
 
     def build_undo(self) -> BaseActivity:
@@ -1062,7 +1057,7 @@ class Announce(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         recipients = [self.get_object_sync().get_actor_sync().id]
 
         for field in ["to", "cc"]:
@@ -1105,7 +1100,7 @@ class Delete(BaseActivity):
         """Get the actual object being deleted (sync wrapper)."""
         return _run_sync(self._get_actual_object())
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self._get_actual_object_sync()
         return obj._recipients()
 
@@ -1116,7 +1111,7 @@ class Update(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         # TODO(tsileo): audience support?
         recipients = []
         for field in ["to", "cc", "bto", "bcc"]:
@@ -1170,7 +1165,7 @@ class Create(BaseActivity):
                 self._data["published"] = now
                 self._data["object"]["published"] = now
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         # TODO(tsileo): audience support?
         recipients = []
         for field in ["to", "cc", "bto", "bcc"]:
@@ -1181,7 +1176,7 @@ class Create(BaseActivity):
 
         return recipients
 
-    def get_tombstone(self, deleted: Optional[str] = None) -> BaseActivity:
+    def get_tombstone(self, deleted: str | None = None) -> BaseActivity:
         return Tombstone(
             id=self.id,
             published=self.get_object_sync().published,
@@ -1232,7 +1227,7 @@ class Flag(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in ACTOR_TYPES:
             return [obj.id]
@@ -1252,7 +1247,7 @@ class Move(BaseActivity):
     ACTOR_REQUIRED = True
     TARGET_REQUIRED = False
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self.get_object_sync()
         return [obj.id]
 
@@ -1268,7 +1263,7 @@ class Join(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return [self.get_object_sync().id]
 
 
@@ -1283,7 +1278,7 @@ class Leave(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return [self.get_object_sync().id]
 
 
@@ -1298,7 +1293,7 @@ class View(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in CREATE_TYPES:
             return [obj.get_actor_sync().id]
@@ -1316,7 +1311,7 @@ class Listen(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self.get_object_sync()
         return [obj.get_actor_sync().id]
 
@@ -1332,7 +1327,7 @@ class Read(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         obj = self.get_object_sync()
         if obj.ACTIVITY_TYPE in CREATE_TYPES:
             return [obj.get_actor_sync().id]
@@ -1351,7 +1346,7 @@ class Write(BaseActivity):
     ACTOR_REQUIRED = True
     TARGET_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         recipients = []
         if self.target:
             recipients.append(self.get_target())
@@ -1373,7 +1368,7 @@ class Travel(BaseActivity):
     ACTOR_REQUIRED = True
     TARGET_REQUIRED = False
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return []
 
 
@@ -1388,7 +1383,7 @@ class Arrive(BaseActivity):
     OBJECT_REQUIRED = True
     ACTOR_REQUIRED = True
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         return []
 
 
@@ -1401,9 +1396,9 @@ class Note(BaseActivity):
         if "sensitive" not in self._data:
             self._data["sensitive"] = False
 
-    def _recipients(self) -> List[str]:
+    def _recipients(self) -> list[str]:
         # TODO(tsileo): audience support?
-        recipients: List[str] = []
+        recipients: list[str] = []
 
         for field in ["to", "cc", "bto", "bcc"]:
             if field in self._data:
@@ -1450,7 +1445,7 @@ class Note(BaseActivity):
 
         return False
 
-    def get_in_reply_to(self) -> Optional[str]:
+    def get_in_reply_to(self) -> str | None:
         return _get_id(self.inReplyTo)
 
     def likes_url(self) -> str:
@@ -1473,7 +1468,7 @@ class Note(BaseActivity):
         Returns:
             An OrderedCollection containing Like activities for this object
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "id": self.likes_url(),
         }
         if count is not None:
@@ -1494,7 +1489,7 @@ class Note(BaseActivity):
         Returns:
             An OrderedCollection containing Announce activities for this object
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "id": self.shares_url(),
         }
         if count is not None:
@@ -1522,7 +1517,7 @@ class Note(BaseActivity):
         Returns:
             An OrderedCollection containing reply objects
         """
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "id": self.replies_url(),
         }
         if count is not None:
@@ -1537,7 +1532,7 @@ class Question(Note):
     ACTOR_REQUIRED = True
     OBJECT_REQUIRED = False
 
-    def one_of(self) -> List[Dict[str, Any]]:
+    def one_of(self) -> list[dict[str, Any]]:
         return self._data.get("oneOf", [])
 
 
@@ -1584,7 +1579,7 @@ class OrderedCollectionPage(BaseActivity):
 
 
 async def fetch_remote_activity(
-    iri: str, expected: Optional[ActivityType] = None
+    iri: str, expected: ActivityType | None = None
 ) -> BaseActivity:
     """Fetch and parse a remote activity (async).
 
@@ -1602,7 +1597,7 @@ async def fetch_remote_activity(
 
 
 def fetch_remote_activity_sync(
-    iri: str, expected: Optional[ActivityType] = None
+    iri: str, expected: ActivityType | None = None
 ) -> BaseActivity:
     """Fetch and parse a remote activity (sync wrapper).
 
