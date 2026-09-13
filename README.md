@@ -68,7 +68,14 @@ Collection, OrderedCollection, CollectionPage, OrderedCollectionPage
 
 ### Security [x]
 
-HTTP Signatures (generation/verification), Linked Data Signatures
+HTTP Signatures incl. RFC 9421 Message Signatures (generation/verification),
+Content-Digest verification, Linked Data Signatures, Data Integrity Proofs
+(FEP-8b32)
+
+### Per-object Collections [x] (v0.2.0)
+
+Likes, Shares, and Replies collections, Featured collections
+(`toot:featured`), backward pagination via `iterate_backward()`
 
 ### Plugin Interface [x]
 
@@ -76,9 +83,10 @@ HTTP Signatures (generation/verification), Linked Data Signatures
 
 ### Missing (Under Development)
 
-- Per-object Likes/Shares collections
-- Backward pagination in collections
-- Featured collection support
+- Server-to-server delivery (`deliver()` POST to remote inboxes)
+- Inbox deduplication by activity ID
+- Retry logic with exponential backoff
+- bto/bcc stripping before delivery
 
 ## Quick Start
 
@@ -168,7 +176,7 @@ create.set_id("https://myapp.example/activity/abc123", "abc123")
 # Get recipients and deliver
 recipients = create.recipients()  # Computed by library
 for inbox in recipients:
-    actor = await fetch_actor(create.get_actor().id)
+    actor = await ap.fetch_iri((await create.get_actor()).id)
     await plugin.deliver_activity(create.to_dict(), inbox, actor)
 ```
 
@@ -186,11 +194,14 @@ note = ap.Note(
 create = note.build_create()
 create.set_id("https://myapp.example/activity/abc123", "abc123")
 
-# Get recipients and deliver (sync wrapper)
+# Get recipients and deliver (sync wrappers + explicit event loop,
+# as deliver_activity is async)
+import asyncio
+
 recipients = create.recipients()
 for inbox in recipients:
-    actor = fetch_actor_sync(create.get_actor_sync().id)
-    plugin.deliver_activity(create.to_dict(), inbox, actor)
+    actor = ap.fetch_iri_sync(create.get_actor_sync().id)
+    asyncio.run(plugin.deliver_activity(create.to_dict(), inbox, actor))
 ```
 
 ### 4. Receive Activities
@@ -208,11 +219,14 @@ async def inbox_handler(request):
 **Sync (Flask, Django sync views):**
 
 ```python
-# In your Flask route
+# In your Flask route (the plugin API is async, so drive it explicitly)
+import asyncio
+
+
 @app.post("/inbox")
 def inbox():
     activity = request.get_json()
-    plugin.receive_activity_sync(activity, source_inbox=request.url)
+    asyncio.run(plugin.receive_activity(activity, source_inbox=request.url))
     return "", 202
 ```
 
@@ -245,10 +259,13 @@ outbox = ap.OrderedCollection(
 )
 
 # Library handles parsing remote collections (async)
-items = await backend.parse_collection(url="https://example.com/user/bob/outbox")
+backend = ap.get_backend()
+items = await backend.parse_collection_async(
+    url="https://example.com/user/bob/outbox"
+)
 
-# Or use sync wrapper
-items = backend.parse_collection_sync(url="https://example.com/user/bob/outbox")
+# Or use the sync variant
+items = backend.parse_collection(url="https://example.com/user/bob/outbox")
 ```
 
 ## API Naming Convention
@@ -263,7 +280,7 @@ The library uses an **async-first** naming convention:
 | Get Object | `get_object()` | `get_object_sync()` |
 | WebFinger | `webfinger()` | `webfinger_sync()` |
 | Verify Signature | `verify_request()` | `verify_request_sync()` |
-| Parse Collection | `parse_collection()` | `parse_collection_sync()` |
+| Parse Collection | `parse_collection_async()` | `parse_collection()` |
 
 **Guideline:** Use async methods by default. Use `_sync()` variants only when integrating with sync frameworks like Flask or Django sync views.
 
