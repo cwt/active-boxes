@@ -6,7 +6,8 @@ to use the active_boxes library for ActivityPub federation.
 This is an **async library** - all network I/O methods use asyncio.
 Your app should use asyncio, FastAPI, aiohttp, or any async framework.
 
-Example usage with asyncio:
+Example usage with asyncio::
+
     from active_boxes.plugin import ActivityPubPlugin
 
     class MyAppBackend(ActivityPubPlugin):

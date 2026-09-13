@@ -192,9 +192,13 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 |---------|--------|-------|
 | Signature Generation | [x] | HTTPSigAuth class |
 | Signature Verification | [x] | verify_request() |
-| Digest Header | [x] | RFC 7231 compliant |
+| Digest Header | [x] | RFC 3230, dual-emitted with Content-Digest |
 | Date Header | [x] | Replay attack prevention |
 | Key Retrieval | [x] | Via actor publicKey |
+| RFC 9421 Message Signatures | [x] | sign_request_rfc9421() / verify_request_rfc9421(), rsa-v1_5-sha256 + ed25519 (v0.2.0) |
+| Ed25519 keys (FEP-521a) | [x] | Ed25519Key, Multikey publicKeyMultibase (v0.2.0) |
+| Content-Digest | [x] | RFC 9530, verified on inbound RFC 9421 (v0.2.0) |
+| Data Integrity Proofs (FEP-8b32) | [x] | data_integrity.py, eddsa-jcs-2022; RsaSignature2017 kept for compat (v0.2.0) |
 
 ---
 
@@ -288,7 +292,7 @@ This design enables:
 | random_object_id() | [x] |
 | extra_inboxes() | [x] (hook for app to add recipients) |
 | is_from_outbox() | [x] |
-| parse_collection() / parse_collection_sync() | [x] |
+| parse_collection() / parse_collection_async() | [x] |
 | get_first_page() | [x] CollectionPaginator |
 | iterate_forward() | [x] CollectionPaginator |
 | iterate_backward() | [x] CollectionPaginator |

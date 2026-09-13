@@ -11,7 +11,21 @@ timestamp: 2026-09-13T00:00:00Z
 
 # Bundle Modification Log
 
-## 2026-09-13
+## 2026-09-13 (v0.1.0 → v0.2.0 audit)
+
+- Audited commits between tags v0.1.0 and v0.2.0 against all concepts.
+- [activitypub-compliance.md](activitypub-compliance.md): added v0.2.0 rows
+  (RFC 9421 signatures, Ed25519/FEP-521a keys, Content-Digest, Data
+  Integrity proofs); corrected `parse_collection_sync()` to
+  `parse_collection_async()`.
+- [modernization-plan.md](modernization-plan.md): marked v0.2.0-completed
+  items (Likes/Shares/Replies/Featured collections, backward pagination,
+  streams, replay prevention, CSP headers, compliance docs); narrowed
+  weeks 9-10 to federation delivery and deduplication.
+- Fixed markdown correctness: table cell counts, list blank lines,
+  duplicate headings, emphasis-as-heading.
+
+## 2026-09-13 (OKF v0.2 migration)
 
 - Migrated the bundle to OKF v0.2: added YAML frontmatter (`type`,
   trust signals) to every concept.

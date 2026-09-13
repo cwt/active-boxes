@@ -90,7 +90,7 @@ class Backend(abc.ABC):
 
         Args:
             url: The URL to fetch
-            **kwargs: Additional arguments passed to aiohttp
+            ``kwargs``: Additional arguments passed to aiohttp
 
         Returns:
             Parsed JSON response
@@ -158,7 +158,7 @@ class Backend(abc.ABC):
 
         Args:
             iri: The IRI/URL to fetch
-            **kwargs: Additional arguments
+            ``kwargs``: Additional arguments
 
         Returns:
             ActivityPub object dict

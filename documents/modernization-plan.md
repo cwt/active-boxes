@@ -193,7 +193,7 @@ Details: [test-suite.md](test-suite.md).
 2. **Deduplication** - No inbox deduplication by activity ID
 3. **Retry Logic** - No exponential backoff for failed deliveries
 4. **HTTP Signature Integration** - httpsig.py exists but not integrated into delivery
-5. **Missing Collections** - Shares, Likes (per-object), Featured, Replies
+5. **Missing Collections** - [x] Shares, Likes (per-object), Featured, Replies IMPLEMENTED (v0.2.0)
 6. **bto/bcc Handling** - Not stripped per spec
 
 #### Deliverables — Phase 4: Protocol Compliance and Features
@@ -205,7 +205,7 @@ Details: [test-suite.md](test-suite.md).
 
 ### Phase 5: Documentation and Release [-] PARTIAL
 
-1. Updated documentation - PARTIAL (needs updating to reflect actual compliance)
+1. Updated documentation - COMPLETED (v0.2.0)
 2. Created usage examples - COMPLETED
 3. Written migration guide - COMPLETED
 4. Prepared for first stable release - PARTIAL
@@ -270,12 +270,12 @@ Details: [test-suite.md](test-suite.md).
 - Replaced deprecated dependencies - COMPLETED
 - Added new dependencies for enhanced functionality - COMPLETED
 
-### Task 7: Improve Documentation [-] PARTIAL
+### Task 7: Improve Documentation [x] COMPLETED (v0.2.0)
 
 - Updated README with modern usage examples - COMPLETED
 - Added API documentation - COMPLETED
 - Created comprehensive examples - COMPLETED
-- Documented ActivityPub compliance - **NEEDS UPDATE**
+- Documented ActivityPub compliance - COMPLETED
 
 ## Timeline
 
@@ -286,7 +286,7 @@ Details: [test-suite.md](test-suite.md).
 | 4-5 | Testing Enhancement | Comprehensive test suite, integration tests | [x] COMPLETED |
 | 6-7 | Protocol Compliance | ActivityPub compliance, error handling, security | [-] PARTIAL |
 | 8 | Documentation and Release | Documentation, examples, stable release | [-] PARTIAL |
-| 9-10 | **Remaining Work** | **Federation delivery, deduplication, extended activities** | **TODO** |
+| 9-10 | **Remaining Work** | **Federation delivery, deduplication** | **TODO** |
 
 ## Remaining Work
 
@@ -306,21 +306,21 @@ Details: [test-suite.md](test-suite.md).
 
 | Feature | Description | File(s) |
 |---------|-------------|----------|
-| Backward pagination | Support prev link in collections | collection.py |
-| streams property | Supplementary collections | activitypub.py |
-| Featured collection | Profile pages | activitypub.py |
-| per-object Likes | Likes collection on objects | activitypub.py |
-| per-object Shares | Shares collection on objects | activitypub.py |
-| Replies collection | Threaded conversations | activitypub.py |
+| [x] Backward pagination | Support prev link in collections (v0.2.0) | collection.py |
+| [x] streams property | Supplementary collections (v0.2.0) | activitypub.py |
+| [x] Featured collection | Profile pages (v0.2.0) | activitypub.py |
+| [x] per-object Likes | Likes collection on objects (v0.2.0) | activitypub.py |
+| [x] per-object Shares | Shares collection on objects (v0.2.0) | activitypub.py |
+| [x] Replies collection | Threaded conversations (v0.2.0) | activitypub.py |
 
 ### Low Priority
 
 | Feature | Description | File(s) |
 |---------|-------------|----------|
 | [x] Extended activities | Join, Leave, View, Listen, Read, Write, Travel, Arrive | activitypub.py |
-| Replay prevention | Verify Date header freshness | httpsig.py |
-| Origin verification | Verify activity origin | activitypub.py |
-| CSP headers | Content Security Policy | TBD |
+| [x] Replay prevention | Verify Date header freshness (v0.2.0) | http_client.py |
+| Origin verification | Verify activity origin (app hook) | activitypub.py |
+| [x] CSP headers | Content Security Policy (v0.2.0) | http_client.py |
 
 ## Success Metrics
 
@@ -331,7 +331,7 @@ Details: [test-suite.md](test-suite.md).
 | Comprehensive test suite with ~89% coverage | [x] | [x] ACHIEVED |
 | Full ActivityPub protocol compliance | [x] | [-] PARTIAL |
 | Modern, readable, maintainable codebase | [x] | [x] ACHIEVED |
-| Proper documentation and usage examples | [x] | [-] PARTIAL |
+| Proper documentation and usage examples | [x] | [x] ACHIEVED (v0.2.0) |
 | Published to PyPI as a stable release | [x] | [x] ACHIEVED |
 
 ## Resources Needed

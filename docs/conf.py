@@ -7,25 +7,25 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
+# Active Boxes modules live in the repository root, one level above this
+# directory.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(".."))
 
 
 # -- Project information -----------------------------------------------------
 
-project = "Little Boxes"
-copyright = "2018, Thomas Sileo"
-author = "Thomas Sileo"
+project = "Active Boxes"
+copyright = "2026, Chaiwat Suttipongsakul"
+author = "Chaiwat Suttipongsakul"
 
 # The short X.Y version
-version = ""
+version = "0.2"
 # The full version, including alpha/beta/rc tags
-release = ""
+release = "0.2.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -56,7 +56,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -80,10 +80,7 @@ html_theme = "alabaster"
 #
 # html_theme_options = {}
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# No custom static files are shipped, so no html_static_path is configured.
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -107,7 +104,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "LittleBoxesdoc"
+htmlhelp_basename = "ActiveBoxesdoc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -133,9 +130,9 @@ latex_elements: dict[str, str] = {
 latex_documents = [
     (
         master_doc,
-        "LittleBoxes.tex",
-        "Little Boxes Documentation",
-        "Thomas Sileo",
+        "ActiveBoxes.tex",
+        "Active Boxes Documentation",
+        "Chaiwat Suttipongsakul",
         "manual",
     )
 ]
@@ -146,7 +143,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, "littleboxes", "Little Boxes Documentation", [author], 1)
+    (master_doc, "activeboxes", "Active Boxes Documentation", [author], 1)
 ]
 
 
@@ -158,11 +155,11 @@ man_pages = [
 texinfo_documents = [
     (
         master_doc,
-        "LittleBoxes",
-        "Little Boxes Documentation",
+        "ActiveBoxes",
+        "Active Boxes Documentation",
         author,
-        "LittleBoxes",
-        "One line description of project.",
+        "ActiveBoxes",
+        "Tiny ActivityPub framework written in Python.",
         "Miscellaneous",
     )
 ]

@@ -99,7 +99,7 @@ async def fetch_iri(iri: str, **kwargs) -> ObjectType:
 
     Args:
         iri: The IRI to fetch
-        **kwargs: Additional arguments passed to the backend
+        ``kwargs``: Additional arguments passed to the backend
 
     Returns:
         The fetched ActivityPub object as a dict
@@ -116,7 +116,7 @@ def fetch_iri_sync(iri: str, **kwargs) -> ObjectType:
 
     Args:
         iri: The IRI to fetch
-        **kwargs: Additional arguments passed to the backend
+        ``kwargs``: Additional arguments passed to the backend
 
     Returns:
         The fetched ActivityPub object as a dict
@@ -129,7 +129,7 @@ async def fetch_json(url: str, **kwargs) -> dict[str, Any]:
 
     Args:
         url: The URL to fetch
-        **kwargs: Additional arguments passed to the backend
+        ``kwargs``: Additional arguments passed to the backend
 
     Returns:
         Parsed JSON response
@@ -146,7 +146,7 @@ def fetch_json_sync(url: str, **kwargs) -> dict[str, Any]:
 
     Args:
         url: The URL to fetch
-        **kwargs: Additional arguments passed to the backend
+        ``kwargs``: Additional arguments passed to the backend
 
     Returns:
         Parsed JSON response
