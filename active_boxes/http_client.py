@@ -65,19 +65,26 @@ class AsyncHTTPClient:
 
     def __init__(self, timeout: int = 15) -> None:
         self.timeout = timeout
-        self._session: aiohttp.ClientSession | None = None
 
-    async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session."""
-        if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            self._session = aiohttp.ClientSession(timeout=timeout)
-        return self._session
+    async def _get_session(self, timeout: int | None = None) -> aiohttp.ClientSession:
+        """Constructs a fresh session; callers must close it.
+
+        Sessions are deliberately NOT shared: _run_sync wrappers drive
+        each call on its own event loop (often on different threads),
+        and reusing a session bound to a closed loop fails every later
+        call with "Event loop is closed".
+        """
+        if timeout is None:
+            timeout = self.timeout
+        return aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
 
     async def close(self) -> None:
-        """Close the HTTP session."""
-        if self._session and not self._session.closed:
-            await self._session.close()
+        """Close the HTTP client.
+
+        Sessions are per-operation since 0.2.3, so there is nothing to
+        close; kept so existing callers (and close_http_client) keep
+        working.
+        """
 
     async def get_json(
         self,
@@ -104,10 +111,10 @@ class AsyncHTTPClient:
         """
         await check_url(url, debug=debug)
 
-        session = await self._get_session()
         if timeout is None:
             timeout = self.timeout
 
+        session = await self._get_session(timeout)
         try:
             async with session.get(
                 url,
@@ -141,6 +148,8 @@ class AsyncHTTPClient:
             raise ActivityUnavailableError(
                 f"unable to fetch {url}, unknown error: {e}"
             )
+        finally:
+            await session.close()
 
     async def post_json(
         self,
@@ -167,7 +176,6 @@ class AsyncHTTPClient:
         """
         await check_url(url, debug=debug)
 
-        session = await self._get_session()
         if timeout is None:
             timeout = self.timeout
 
@@ -175,6 +183,7 @@ class AsyncHTTPClient:
         json_headers.setdefault("Content-Type", "application/json")
         json_headers.setdefault("Accept", "application/activity+json")
 
+        session = await self._get_session(timeout)
         try:
             resp = await session.post(
                 url,
@@ -193,12 +202,15 @@ class AsyncHTTPClient:
             raise ActivityUnavailableError(
                 f"unable to POST to {url}, unknown error: {e}"
             )
+        finally:
+            await session.close()
 
 
 async def fetch_json(
     url: str,
     user_agent: str | None = None,
     timeout: int = 15,
+    debug: bool = False,
 ) -> dict[str, Any]:
     """Fetch JSON from a URL (async).
 
@@ -206,6 +218,7 @@ async def fetch_json(
         url: The URL to fetch
         user_agent: Optional user agent string
         timeout: Request timeout in seconds
+        debug: Allow non-public URLs (loopback, private nets)
 
     Returns:
         Parsed JSON response
@@ -220,7 +233,7 @@ async def fetch_json(
 
     client = AsyncHTTPClient(timeout=timeout)
     try:
-        return await client.get_json(url, headers=headers)
+        return await client.get_json(url, headers=headers, debug=debug)
     finally:
         await client.close()
 
@@ -229,6 +242,7 @@ def fetch_json_sync(
     url: str,
     user_agent: str | None = None,
     timeout: int = 15,
+    debug: bool = False,
 ) -> dict[str, Any]:
     """Fetch JSON from a URL (sync wrapper).
 
@@ -238,11 +252,14 @@ def fetch_json_sync(
         url: The URL to fetch
         user_agent: Optional user agent string
         timeout: Request timeout in seconds
+        debug: Allow non-public URLs (loopback, private nets)
 
     Returns:
         Parsed JSON response
     """
-    return _run_sync(fetch_json(url, user_agent=user_agent, timeout=timeout))
+    return _run_sync(
+        fetch_json(url, user_agent=user_agent, timeout=timeout, debug=debug)
+    )
 
 
 async def fetch_activity(

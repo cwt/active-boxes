@@ -1,7 +1,10 @@
 """Tests for http_client module."""
 
 import asyncio
+import json
+import threading
 from datetime import datetime, timedelta, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest import mock
 
 import aiohttp
@@ -344,6 +347,14 @@ class TestFetchActivity:
             assert result["type"] == "Create"
 
 
+def _client_session_for(mock_session):
+    """Patches ClientSession construction to return mock_session."""
+    return mock.patch(
+        "active_boxes.http_client.aiohttp.ClientSession",
+        return_value=mock_session,
+    )
+
+
 class TestAsyncHTTPClient:
     """Test AsyncHTTPClient class."""
 
@@ -352,7 +363,6 @@ class TestAsyncHTTPClient:
         """Test AsyncHTTPClient initialization."""
         client = http_client.AsyncHTTPClient(timeout=30)
         assert client.timeout == 30
-        assert client._session is None
         await client.close()
 
     @pytest.mark.asyncio
@@ -361,21 +371,26 @@ class TestAsyncHTTPClient:
         client = http_client.AsyncHTTPClient()
         session = await client._get_session()
         assert session is not None
-        assert client._session is session
-        await client.close()
+        await session.close()
 
     @pytest.mark.asyncio
-    async def test_get_session_reuses_existing(self):
-        """Test _get_session reuses existing session."""
+    async def test_get_session_fresh_each_time(self):
+        """Test _get_session returns a new session per call.
+
+        Sessions must not be shared: _run_sync wrappers drive each call
+        on its own event loop, and reusing a session bound to a closed
+        loop fails every later call with "Event loop is closed".
+        """
         client = http_client.AsyncHTTPClient()
         session1 = await client._get_session()
         session2 = await client._get_session()
-        assert session1 is session2
-        await client.close()
+        assert session1 is not session2
+        await session1.close()
+        await session2.close()
 
     @pytest.mark.asyncio
     async def test_close_with_no_session(self):
-        """Test close when no session exists."""
+        """Test close is a harmless no-op (sessions are per-operation)."""
         client = http_client.AsyncHTTPClient()
         await client.close()  # Should not raise
 
@@ -384,7 +399,6 @@ class TestAsyncHTTPClient:
         """Test get_json raises ActivityUnavailableError on 404 (wrapped from ActivityNotFoundError)."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             # Create a proper async context manager mock
             mock_resp = mock.AsyncMock()
@@ -395,21 +409,21 @@ class TestAsyncHTTPClient:
             mock_cm.__aenter__.return_value = mock_resp
             mock_cm.__aexit__.return_value = None
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
             # Note: ActivityNotFoundError gets caught and re-raised as ActivityUnavailableError
             with (
-                mock.patch.object(session, "get", return_value=mock_cm),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/missing")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_410_error(self):
         """Test get_json raises ActivityUnavailableError on 410 (wrapped from ActivityGoneError)."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_resp = mock.AsyncMock()
             mock_resp.status = 410
@@ -418,75 +432,75 @@ class TestAsyncHTTPClient:
             mock_cm.__aenter__.return_value = mock_resp
             mock_cm.__aexit__.return_value = None
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
             # Note: ActivityGoneError gets caught and re-raised as ActivityUnavailableError
             with (
-                mock.patch.object(session, "get", return_value=mock_cm),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/gone")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_500_error(self):
         """Test get_json raises ActivityUnavailableError on 500."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 500
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
             with (
-                mock.patch.object(session, "get", return_value=mock_cm),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/error")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_502_error(self):
         """Test get_json raises ActivityUnavailableError on 502."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 502
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
             with (
-                mock.patch.object(session, "get", return_value=mock_cm),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/error")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_503_error(self):
         """Test get_json raises ActivityUnavailableError on 503."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 503
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
             with (
-                mock.patch.object(session, "get", return_value=mock_cm),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/error")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_invalid_json(self):
         """Test get_json raises ActivityUnavailableError on invalid JSON response."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_cm = mock.AsyncMock()
             mock_cm.__aenter__.return_value.status = 200
@@ -495,81 +509,78 @@ class TestAsyncHTTPClient:
                 side_effect=Exception("Invalid JSON")
             )
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
             # Note: NotAnActivityError gets caught and re-raised as ActivityUnavailableError
             with (
-                mock.patch.object(session, "get", return_value=mock_cm),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/invalid")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_connection_error(self):
         """Test get_json raises ActivityUnavailableError on connection error."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
+
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(
+                side_effect=aiohttp.ClientConnectorError(
+                    mock.Mock(), mock.Mock()
+                ),
+            )
 
             with (
-                mock.patch.object(
-                    session,
-                    "get",
-                    side_effect=aiohttp.ClientConnectorError(
-                        mock.Mock(), mock.Mock()
-                    ),
-                ),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/error")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_timeout(self):
         """Test get_json raises ActivityUnavailableError on timeout."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
+
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(side_effect=asyncio.TimeoutError())
 
             with (
-                mock.patch.object(
-                    session, "get", side_effect=asyncio.TimeoutError()
-                ),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.get_json("https://example.com/timeout")
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_get_json_custom_timeout(self):
         """Test get_json with custom timeout."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_response = mock.AsyncMock()
             mock_response.status = 200
             mock_response.raise_for_status = mock.Mock()
             mock_response.json = mock.AsyncMock(return_value={"data": 1})
 
-            with mock.patch.object(session, "get") as mock_get:
-                mock_get.return_value.__aenter__.return_value = mock_response
+            mock_cm = mock.AsyncMock()
+            mock_cm.__aenter__.return_value = mock_response
 
+            mock_session = mock.AsyncMock()
+            mock_session.get = mock.Mock(return_value=mock_cm)
+
+            with _client_session_for(mock_session):
                 result = await client.get_json(
                     "https://example.com/data", timeout=30
                 )
                 assert result == {"data": 1}
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_post_json_success(self):
         """Test post_json successful POST."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_response = mock.AsyncMock()
             mock_response.status = 200
@@ -577,32 +588,31 @@ class TestAsyncHTTPClient:
             async def mock_post(*args, **kwargs):
                 return mock_response
 
-            with mock.patch.object(
-                session, "post", side_effect=mock_post
-            ) as mock_post_func:
+            mock_session = mock.AsyncMock()
+            mock_session.post = mock.Mock(side_effect=mock_post)
+
+            with _client_session_for(mock_session):
                 result = await client.post_json(
                     "https://example.com/inbox", {"test": "data"}
                 )
                 assert result is mock_response
-                mock_post_func.assert_called_once()
-
-            await client.close()
+                mock_session.post.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_post_json_with_headers(self):
         """Test post_json with custom headers."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
 
             mock_response = mock.AsyncMock()
 
             async def mock_post(*args, **kwargs):
                 return mock_response
 
-            with mock.patch.object(
-                session, "post", side_effect=mock_post
-            ) as mock_post_func:
+            mock_session = mock.AsyncMock()
+            mock_session.post = mock.Mock(side_effect=mock_post)
+
+            with _client_session_for(mock_session):
                 await client.post_json(
                     "https://example.com/inbox",
                     {"test": "data"},
@@ -610,48 +620,42 @@ class TestAsyncHTTPClient:
                 )
 
                 # Verify headers were passed
-                call_kwargs = mock_post_func.call_args[1]
+                call_kwargs = mock_session.post.call_args[1]
                 assert "headers" in call_kwargs
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_post_json_connection_error(self):
         """Test post_json raises ActivityUnavailableError on connection error."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
+
+            mock_session = mock.AsyncMock()
+            mock_session.post = mock.Mock(
+                side_effect=aiohttp.ClientConnectorError(
+                    mock.Mock(), mock.Mock()
+                ),
+            )
 
             with (
-                mock.patch.object(
-                    session,
-                    "post",
-                    side_effect=aiohttp.ClientConnectorError(
-                        mock.Mock(), mock.Mock()
-                    ),
-                ),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.post_json("https://example.com/inbox", {})
-
-            await client.close()
 
     @pytest.mark.asyncio
     async def test_post_json_timeout(self):
         """Test post_json raises ActivityUnavailableError on timeout."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
-            session = await client._get_session()
+
+            mock_session = mock.AsyncMock()
+            mock_session.post = mock.Mock(side_effect=asyncio.TimeoutError())
 
             with (
-                mock.patch.object(
-                    session, "post", side_effect=asyncio.TimeoutError()
-                ),
+                _client_session_for(mock_session),
                 pytest.raises(ap.ActivityUnavailableError),
             ):
                 await client.post_json("https://example.com/inbox", {})
-
-            await client.close()
 
 
 class TestHeaderHelpers:
@@ -792,7 +796,7 @@ async def test_get_json_passes_debug_flag():
     mock_resp.json = mock.AsyncMock(return_value={"ok": True})
     mock_ctx = mock.AsyncMock()
     mock_ctx.__aenter__.return_value = mock_resp
-    mock_session = mock.Mock()
+    mock_session = mock.AsyncMock()
     mock_session.get = mock.Mock(return_value=mock_ctx)
 
     with (
@@ -821,7 +825,7 @@ async def test_get_json_debug_defaults_false():
     mock_resp.json = mock.AsyncMock(return_value={"ok": True})
     mock_ctx = mock.AsyncMock()
     mock_ctx.__aenter__.return_value = mock_resp
-    mock_session = mock.Mock()
+    mock_session = mock.AsyncMock()
     mock_session.get = mock.Mock(return_value=mock_ctx)
 
     with (
@@ -846,7 +850,7 @@ async def test_post_json_passes_debug_flag():
     """post_json must forward debug to URL validation (loopback support)."""
     mock_resp = mock.AsyncMock()
     mock_resp.status = 200
-    mock_session = mock.Mock()
+    mock_session = mock.AsyncMock()
     mock_session.post = mock.AsyncMock(return_value=mock_resp)
 
     with (
@@ -864,3 +868,37 @@ async def test_post_json_passes_debug_flag():
         await client.post_json("http://localhost:9/inbox", {"test": "data"}, debug=True)
 
     mock_check.assert_awaited_once_with("http://localhost:9/inbox", debug=True)
+
+
+class _LoopbackHandler(BaseHTTPRequestHandler):
+    """Serves a fixed JSON document (test scaffolding)."""
+
+    def do_GET(self):
+        body = json.dumps({"ok": True}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/activity+json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+
+def test_fetch_json_sync_survives_loop_turnover():
+    """Sync wrappers drive each call on a fresh event loop.
+
+    Regression test: sharing one session across those loops failed every
+    call after the first with "Event loop is closed".
+    """
+    server = HTTPServer(("127.0.0.1", 0), _LoopbackHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        url = f"http://127.0.0.1:{server.server_port}/doc"
+        first = http_client.fetch_json_sync(url, debug=True)
+        second = http_client.fetch_json_sync(url, debug=True)
+        assert first == second == {"ok": True}
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
