@@ -1,3 +1,16 @@
+---
+type: modernization-record
+title: Python 3.10+ Modernization Plan
+description: Completed checklist of Python 3.10+ language upgrades (typing, pattern matching, idioms) with code examples.
+sources:
+  - documents/PYTHON_310_MODERNIZATION.md
+status: stable
+verified: human-reviewed
+stale_after: 2027-09-13T00:00:00Z
+tags: [python, modernization, typing, completed]
+timestamp: 2026-09-13T00:00:00Z
+---
+
 # Python 3.10+ Modernization Plan - [x] COMPLETED
 
 ## Type Hinting Improvements - [x] COMPLETED

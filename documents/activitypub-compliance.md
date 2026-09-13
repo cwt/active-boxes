@@ -1,4 +1,19 @@
+---
+type: compliance-report
+title: ActivityPub Protocol Compliance Requirements
+description: Living compliance matrix for core/extended activities, actors, collections, signatures, and app-vs-library responsibilities.
+sources:
+  - documents/ACTIVITYPUB_COMPLIANCE.md
+status: stable
+verified: human-reviewed
+stale_after: 2027-03-13T00:00:00Z
+tags: [activitypub, compliance, federation, security]
+timestamp: 2026-09-13T00:00:00Z
+---
+
 # ActivityPub Protocol Compliance Requirements
+
+> Living document. For the historical modernization context, see [modernization-plan.md](modernization-plan.md).
 
 ## Overview
 
@@ -123,9 +138,9 @@ ActivityPub is a decentralized social networking protocol based on the ActivityS
 
 | Property | Status | Notes |
 |----------|--------|-------|
-| preferredUsername | [x] |
+| preferredUsername | [x] |  |
 | endpoints | [-] | Only sharedInbox handled |
-| sharedInbox | [x] |
+| sharedInbox | [x] |  |
 | streams | [x] | `get_streams()`, `add_stream()` |
 | manuallyApprovesFollowers | [x] | `manually_approves_followers()`, `requires_follow_approval()` |
 | publicKey | [x] | Delegated to key.py |
@@ -211,6 +226,7 @@ activity = get_object_sync()
 ```
 
 This design enables:
+
 - Clean async code for FastAPI, aiohttp, Quart, etc.
 - Backwards compatibility with Flask, Django sync views via `_sync()` wrappers
 - Clear distinction between async and sync usage patterns
@@ -219,13 +235,13 @@ This design enables:
 
 ## JSON-LD and Context - [x] Implemented
 
-| Feature | Status |
-|---------|--------|
-| @context inclusion | [x] |
-| Security context | [x] |
-| Extension context | [x] |
-| JSON-LD serialization | [x] |
-| ActivityStreams 2.0 | [x] |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| @context inclusion | [x] |  |
+| Security context | [x] |  |
+| Extension context | [x] |  |
+| JSON-LD serialization | [x] |  |
+| ActivityStreams 2.0 | [x] |  |
 | Content negotiation | [x] | `get_accept_header()`, `get_content_type_header()` support activity, ld+json, json, html |
 
 ---
@@ -368,7 +384,7 @@ The library handles:
 | Properties validation | [x] |
 | Collection support | [-] Partial |
 
-### Security Requirements
+### Security Requirements (Checklist)
 
 | Requirement | Status |
 |-------------|--------|

@@ -281,13 +281,12 @@ The library uses an **async-first** naming convention:
 
 ## Modernization Plans
 
-Detailed planning documents have been created to guide the modernization effort:
+Detailed planning documents have been created to guide the modernization effort (see the [knowledge bundle](documents/index.md)):
 
-- [MODERNIZE_PLAN.md](documents/MODERNIZE_PLAN.md) - Overall modernization strategy
-- [PYTHON_310_MODERNIZATION.md](documents/PYTHON_310_MODERNIZATION.md) - Python 3.10+ feature implementation
-- [TEST_SUITE_IMPROVEMENTS.md](documents/TEST_SUITE_IMPROVEMENTS.md) - Test suite enhancement plans
-- [ACTIVITYPUB_COMPLIANCE.md](documents/ACTIVITYPUB_COMPLIANCE.md) - ActivityPub protocol compliance requirements
-- [IMPLEMENTATION_PLAN.md](documents/IMPLEMENTATION_PLAN.md) - Detailed 8-week implementation timeline
+- [modernization-plan.md](documents/modernization-plan.md) - Overall modernization strategy and implementation timeline
+- [python-310-modernization.md](documents/python-310-modernization.md) - Python 3.10+ feature implementation
+- [test-suite.md](documents/test-suite.md) - Test suite enhancement plans
+- [activitypub-compliance.md](documents/activitypub-compliance.md) - ActivityPub protocol compliance requirements
 
 ## Original Project
 
