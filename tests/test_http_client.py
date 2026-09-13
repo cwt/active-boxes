@@ -225,19 +225,13 @@ class TestRunSync:
 
     @pytest.mark.asyncio
     async def test_run_sync_from_async_raises(self):
-        """Test _run_sync raises from async context."""
+        """Test _run_sync is nest-safe from async context."""
 
         async def dummy():
             return 1
 
-        coro = dummy()
-        with pytest.raises(RuntimeError, match="Cannot run async code"):
-            http_client._run_sync(coro)
-        # Clean up the coroutine if not consumed
-        try:
-            await coro
-        except RuntimeError:
-            pass
+        result = http_client._run_sync(dummy())
+        assert result == 1
 
     def test_run_sync_from_sync(self):
         """Test _run_sync works from sync context."""

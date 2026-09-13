@@ -16,6 +16,7 @@ from typing import Any
 import aiohttp
 
 from .__version__ import __version__
+from ._sync import _run_sync
 from .errors import (
     ActivityGoneError,
     ActivityNotFoundError,
@@ -413,36 +414,6 @@ def close_http_client_sync() -> None:
     For async code, use await close_http_client() instead.
     """
     _run_sync(close_http_client())
-
-
-def _run_sync(coro):
-    """Run an async coroutine from sync code.
-
-    This enables Flask/Django and other sync frameworks to use the library.
-    For new code, prefer async/await syntax.
-
-    Args:
-        coro: A coroutine to run
-
-    Returns:
-        The result of the coroutine
-
-    Raises:
-        RuntimeError: If called from within an async context
-    """
-    if not asyncio.iscoroutine(coro):
-        return coro
-
-    try:
-        asyncio.get_running_loop()
-        raise RuntimeError(
-            "Cannot run async code from within an async context. "
-            "Use 'await' instead of the _sync() wrapper."
-        )
-    except RuntimeError as e:
-        if "no running event loop" in str(e):
-            return asyncio.run(coro)
-        raise
 
 
 ACCEPT_HEADERS = {

@@ -5,12 +5,12 @@ All network I/O is async using aiohttp.
 """
 
 import abc
-import asyncio
 import binascii
 import os
 from typing import TYPE_CHECKING, Any
 
 from .__version__ import __version__
+from ._sync import _run_sync
 from .collection import parse_collection
 from .errors import (
     ActivityGoneError,
@@ -23,36 +23,6 @@ from .urlutils import URLLookupFailedError
 
 if TYPE_CHECKING:
     from active_boxes import activitypub as ap
-
-
-def _run_sync(coro):
-    """Run an async coroutine from sync code.
-
-    This enables Flask/Django and other sync frameworks to use the library.
-    For new code, prefer async/await syntax.
-
-    Args:
-        coro: A coroutine to run
-
-    Returns:
-        The result of the coroutine
-
-    Raises:
-        RuntimeError: If called from within an async context
-    """
-    if not asyncio.iscoroutine(coro):
-        return coro
-
-    try:
-        asyncio.get_running_loop()
-        raise RuntimeError(
-            "Cannot run async code from within an async context. "
-            "Use 'await' instead of the _sync() wrapper."
-        )
-    except RuntimeError as e:
-        if "no running event loop" in str(e):
-            return asyncio.run(coro)
-        raise
 
 
 class Backend(abc.ABC):

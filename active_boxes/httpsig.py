@@ -16,7 +16,6 @@ Mastodon 4.7 behaviour.
 Mastodon and other Fediverse instances won't accept unsigned requests.
 """
 
-import asyncio
 import base64
 import hashlib
 import hmac
@@ -31,41 +30,12 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import ECC
 from Crypto.Signature import PKCS1_v1_5, eddsa
 
+from ._sync import _run_sync
 from .activitypub import _await_if_coroutine, _has_type, get_backend
 from .errors import ActivityGoneError, ActivityNotFoundError
 from .key import Ed25519Key, Key
 
 logger = logging.getLogger(__name__)
-
-
-def _run_sync(coro):
-    """Run an async coroutine from sync code.
-
-    This enables Flask/Django and other sync frameworks to use the library.
-    For new code, prefer async/await syntax.
-
-    Args:
-        coro: A coroutine to run
-
-    Returns:
-        The result of the coroutine
-
-    Raises:
-        RuntimeError: If called from within an async context
-    """
-    if not asyncio.iscoroutine(coro):
-        return coro
-
-    try:
-        asyncio.get_running_loop()
-        raise RuntimeError(
-            "Cannot run async code from within an async context. "
-            "Use 'await' instead of the _sync() wrapper."
-        )
-    except RuntimeError as e:
-        if "no running event loop" in str(e):
-            return asyncio.run(coro)
-        raise
 
 
 def _build_signed_string(

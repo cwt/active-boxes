@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, ClassVar, Union
 
+from ._sync import _run_sync
 from .backend import Backend
 from .errors import (
     ActivityGoneError,
@@ -168,37 +169,6 @@ async def _await_if_coroutine(result):
     if asyncio.iscoroutine(result):
         return await result
     return result
-
-
-def _run_sync(coro):
-    """Run an async coroutine from sync code.
-
-    This enables Flask/Django and other sync frameworks to use the library.
-    For new code, prefer async/await syntax.
-
-    Args:
-        coro: A coroutine to run
-
-    Returns:
-        The result of the coroutine
-
-    Raises:
-        RuntimeError: If called from within an async context
-    """
-    if not asyncio.iscoroutine(coro):
-        return coro
-
-    try:
-        asyncio.get_running_loop()
-        raise RuntimeError(
-            "Cannot run async code from within an async context. "
-            "Use 'await' instead of the _sync() wrapper."
-        )
-    except RuntimeError as e:
-        if "no running event loop" in str(e):
-            # No event loop running, safe to use asyncio.run()
-            return asyncio.run(coro)
-        raise
 
 
 def format_datetime(dt: datetime) -> str:
@@ -674,7 +644,7 @@ class BaseActivity(metaclass=_ActivityMeta):
         if isinstance(self._data["object"], dict):
             p = parse_activity(self._data["object"])
         else:
-            result = backend.fetch_iri_sync(self._data["object"])
+            result = backend.fetch_iri(self._data["object"])
             obj = await _await_if_coroutine(result)
             if ActivityType(obj.get("type")) not in self.ALLOWED_OBJECT_TYPES:
                 raise UnexpectedActivityTypeError(
@@ -753,7 +723,7 @@ class BaseActivity(metaclass=_ActivityMeta):
 
             actor_id = self._actor_id(item)
 
-            result = backend.fetch_iri_sync(actor_id)
+            result = backend.fetch_iri(actor_id)
             actor_obj = await _await_if_coroutine(result)
             p = parse_activity(actor_obj)
             if not p.has_type(ACTOR_TYPES):  # type: ignore
@@ -1087,10 +1057,10 @@ class Delete(BaseActivity):
             obj.id.startswith(backend.base_url())
             and obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE
         ):
-            result = backend.fetch_iri_sync(obj.id)
+            result = backend.fetch_iri(obj.id)
             obj = parse_activity(await _await_if_coroutine(result))
         if obj.ACTIVITY_TYPE == ActivityType.TOMBSTONE:
-            result = backend.fetch_iri_sync(obj.id)
+            result = backend.fetch_iri(obj.id)
             better_obj = await _await_if_coroutine(result)
             if better_obj:
                 return parse_activity(better_obj)
@@ -1141,6 +1111,9 @@ class Create(BaseActivity):
         _ensure_backend()
         backend = get_backend()
 
+        if not isinstance(self._data.get("object"), dict):
+            self.reset_object_cache()
+            return
         # FIXME(tsileo): add a BACKEND.note_activity_url, and pass the actor to both
         self._data["object"]["id"] = uri + "/activity"
         if "url" not in self._data["object"]:
@@ -1154,6 +1127,9 @@ class Create(BaseActivity):
 
     def _init(self) -> None:
         obj = self.get_object_sync()
+        if not isinstance(self._data.get("object"), dict):
+            # Object is a remote IRI, not an embedded dict: nothing to backfill.
+            return
         if not obj.attributedTo:
             self._data["object"]["attributedTo"] = self.get_actor_sync().id
         if not obj.published:

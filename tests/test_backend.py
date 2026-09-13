@@ -310,21 +310,19 @@ def test_run_sync_with_none():
 
 @pytest.mark.asyncio
 async def test_run_sync_from_async_context_raises():
-    """Test that _run_sync raises RuntimeError when called from async context."""
+    """Test that _run_sync is nest-safe when called from async context.
+
+    Regression test: sync wrappers (e.g. Create._init -> get_object_sync)
+    are invoked from within a running loop via fetch_remote_activity_sync
+    -> asyncio.run -> parse_activity, and via await fetch_remote_activity.
+    _run_sync must drive the coroutine in a worker thread instead of raising.
+    """
 
     async def dummy_coro():
         return 42
 
-    coro = dummy_coro()
-    with pytest.raises(
-        RuntimeError, match="Cannot run async code from within an async context"
-    ):
-        _run_sync(coro)
-    # Clean up the coroutine if not consumed
-    try:
-        await coro
-    except RuntimeError:
-        pass
+    result = _run_sync(dummy_coro())
+    assert result == 42
 
 
 def test_run_sync_from_sync_context():

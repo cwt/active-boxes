@@ -3,45 +3,15 @@
 This module provides WebFinger endpoint discovery for ActivityPub actors.
 """
 
-import asyncio
 import logging
 from typing import Any
 from urllib.parse import urlparse
 
+from ._sync import _run_sync
 from .activitypub import _await_if_coroutine, get_backend
 from .urlutils import check_url
 
 logger = logging.getLogger(__name__)
-
-
-def _run_sync(coro):
-    """Run an async coroutine from sync code.
-
-    This enables Flask/Django and other sync frameworks to use the library.
-    For new code, prefer async/await syntax.
-
-    Args:
-        coro: A coroutine to run
-
-    Returns:
-        The result of the coroutine
-
-    Raises:
-        RuntimeError: If called from within an async context
-    """
-    if not asyncio.iscoroutine(coro):
-        return coro
-
-    try:
-        asyncio.get_running_loop()
-        raise RuntimeError(
-            "Cannot run async code from within an async context. "
-            "Use 'await' instead of the _sync() wrapper."
-        )
-    except RuntimeError as e:
-        if "no running event loop" in str(e):
-            return asyncio.run(coro)
-        raise
 
 
 async def webfinger(
