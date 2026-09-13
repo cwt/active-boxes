@@ -140,6 +140,53 @@ def test_build_signed_string():
     assert result == expected
 
 
+def test_build_signed_string_capitalized_headers():
+    # Real HTTP headers arrive capitalized; the signed names are
+    # lowercase. Values must still make it into the signed string.
+    signed_headers = "(request-target) user-agent host date digest content-type"
+    headers = {
+        "User-Agent": "test-agent",
+        "Host": "example.com",
+        "Date": "Mon, 01 Jan 2023 00:00:00 GMT",
+        "Content-Type": "application/activity+json",
+    }
+
+    result = httpsig._build_signed_string(
+        signed_headers, "POST", "/inbox", headers, "SHA-256=abc123"
+    )
+    assert "user-agent: test-agent" in result
+    assert "host: example.com" in result
+    assert "date: Mon, 01 Jan 2023 00:00:00 GMT" in result
+    assert "digest: SHA-256=abc123" in result
+    assert "content-type: application/activity+json" in result
+
+
+@mock.patch("active_boxes.httpsig.get_verification_key")
+def test_sign_verify_plain_dict_roundtrip(mock_get_key):
+    # Signing a plain dict with capitalized keys (as produced outside
+    # requests) must verify through case-insensitive headers, the way
+    # real servers hand them to verifiers. Previously the builder
+    # signed empty values, which only verified against the same broken
+    # convention.
+    from requests.structures import CaseInsensitiveDict
+
+    k = Key("https://example.com", "https://example.com#key")
+    k.new()
+    k.pubkey = k.privkey.publickey()
+    mock_get_key.return_value = (k, "rsa")
+
+    body = '{"type": "Follow"}'
+    headers = {
+        "Content-Type": "application/activity+json",
+        "Accept": "application/activity+json",
+        "User-Agent": "test-agent",
+    }
+    signed = httpsig.sign_request_sync("POST", "/inbox", headers, k, body)
+
+    received = CaseInsensitiveDict(signed)
+    assert httpsig.verify_request_sync("POST", "/inbox", received, body) is True
+
+
 def test_body_digest():
     # Test body digest calculation
     body = b'{"test": "data"}'

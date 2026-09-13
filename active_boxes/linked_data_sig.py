@@ -37,7 +37,7 @@ def _options_hash(doc):
     for k in ["type", "id", "signatureValue"]:
         if k in doc:
             del doc[k]
-    doc["@context"] = "https://w3id.org/identity/v1"
+    doc["@context"] = "https://w3id.org/security/v1"
     if normalized := jsonld.normalize(
         doc, {"algorithm": "URDNA2015", "format": "application/nquads"}
     ):

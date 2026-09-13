@@ -53,7 +53,9 @@ def _build_signed_string(
         elif signed_header == "digest":
             out.append("digest: " + body_digest)
         else:
-            out.append(signed_header + ": " + headers.get(signed_header, ""))
+            # Case-insensitive: real HTTP headers arrive capitalized
+            # ("User-Agent") while the signed names are lowercase.
+            out.append(signed_header + ": " + (get_header(headers, signed_header) or ""))
     return "\n".join(out)
 
 

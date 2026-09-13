@@ -110,3 +110,16 @@ def test_linked_data_sig(mock_loader):
 
         linked_data_sig.generate_signature(doc, k)
         assert linked_data_sig.verify_signature(doc, k)
+
+
+def test_linked_data_sig_live_context():
+    # No mocks: the contexts involved must actually dereference.
+    # Guards the w3id identity/v1 outage class, where signing was
+    # impossible because the options context no longer resolves.
+    doc = json.loads(DOC)
+
+    k = Key("https://lol.com")
+    k.new()
+
+    linked_data_sig.generate_signature(doc, k)
+    assert linked_data_sig.verify_signature(doc, k)
