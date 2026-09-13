@@ -20,14 +20,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
-version = "0.2.0"
+version = "0.2.1"
 
 [project.urls]
 Homepage = "https://github.com/cwt/active-boxes"
 
 [tool.poetry]
 name = "active-boxes"
-version = "0.2.0"
+version = "0.2.1"
 description = "Tiny ActivityPub framework written in Python, both database and server agnostic."
 authors = ["Chaiwat Suttipongsakul <cwt@bashell.com>"]
 license = "MIT"
