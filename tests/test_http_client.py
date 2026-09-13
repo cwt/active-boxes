@@ -782,3 +782,85 @@ class TestComputeDigest:
         """Test compute_digest with unicode content."""
         digest = http_client.compute_digest("Hello 世界")
         assert digest.startswith("SHA-256=")
+
+
+@pytest.mark.asyncio
+async def test_get_json_passes_debug_flag():
+    """get_json must forward debug to URL validation (loopback support)."""
+    mock_resp = mock.Mock()
+    mock_resp.status = 200
+    mock_resp.json = mock.AsyncMock(return_value={"ok": True})
+    mock_ctx = mock.AsyncMock()
+    mock_ctx.__aenter__.return_value = mock_resp
+    mock_session = mock.Mock()
+    mock_session.get = mock.Mock(return_value=mock_ctx)
+
+    with (
+        mock.patch.object(
+            http_client.AsyncHTTPClient,
+            "_get_session",
+            new_callable=mock.AsyncMock,
+            return_value=mock_session,
+        ),
+        mock.patch(
+            "active_boxes.http_client.check_url", new_callable=mock.AsyncMock
+        ) as mock_check,
+    ):
+        client = http_client.AsyncHTTPClient()
+        result = await client.get_json("http://localhost:9/x", debug=True)
+
+    assert result == {"ok": True}
+    mock_check.assert_awaited_once_with("http://localhost:9/x", debug=True)
+
+
+@pytest.mark.asyncio
+async def test_get_json_debug_defaults_false():
+    """get_json validates strictly unless debug is requested."""
+    mock_resp = mock.Mock()
+    mock_resp.status = 200
+    mock_resp.json = mock.AsyncMock(return_value={"ok": True})
+    mock_ctx = mock.AsyncMock()
+    mock_ctx.__aenter__.return_value = mock_resp
+    mock_session = mock.Mock()
+    mock_session.get = mock.Mock(return_value=mock_ctx)
+
+    with (
+        mock.patch.object(
+            http_client.AsyncHTTPClient,
+            "_get_session",
+            new_callable=mock.AsyncMock,
+            return_value=mock_session,
+        ),
+        mock.patch(
+            "active_boxes.http_client.check_url", new_callable=mock.AsyncMock
+        ) as mock_check,
+    ):
+        client = http_client.AsyncHTTPClient()
+        await client.get_json("https://example.com/x")
+
+    mock_check.assert_awaited_once_with("https://example.com/x", debug=False)
+
+
+@pytest.mark.asyncio
+async def test_post_json_passes_debug_flag():
+    """post_json must forward debug to URL validation (loopback support)."""
+    mock_resp = mock.AsyncMock()
+    mock_resp.status = 200
+    mock_session = mock.Mock()
+    mock_session.post = mock.AsyncMock(return_value=mock_resp)
+
+    with (
+        mock.patch.object(
+            http_client.AsyncHTTPClient,
+            "_get_session",
+            new_callable=mock.AsyncMock,
+            return_value=mock_session,
+        ),
+        mock.patch(
+            "active_boxes.http_client.check_url", new_callable=mock.AsyncMock
+        ) as mock_check,
+    ):
+        client = http_client.AsyncHTTPClient()
+        await client.post_json("http://localhost:9/inbox", {"test": "data"}, debug=True)
+
+    mock_check.assert_awaited_once_with("http://localhost:9/inbox", debug=True)

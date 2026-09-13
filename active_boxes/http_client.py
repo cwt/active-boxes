@@ -84,6 +84,7 @@ class AsyncHTTPClient:
         url: str,
         headers: dict[str, str] | None = None,
         timeout: int | None = None,
+        debug: bool = False,
     ) -> dict[str, Any]:
         """Fetch JSON from a URL.
 
@@ -91,6 +92,7 @@ class AsyncHTTPClient:
             url: The URL to fetch
             headers: Optional HTTP headers
             timeout: Optional timeout override
+            debug: Allow non-public URLs (loopback, private nets)
 
         Returns:
             Parsed JSON response
@@ -100,7 +102,7 @@ class AsyncHTTPClient:
             ActivityGoneError: 410 response
             ActivityUnavailableError: 5xx response or connection error
         """
-        await check_url(url)
+        await check_url(url, debug=debug)
 
         session = await self._get_session()
         if timeout is None:
@@ -146,6 +148,7 @@ class AsyncHTTPClient:
         data: dict[str, Any],
         headers: dict[str, str] | None = None,
         timeout: int | None = None,
+        debug: bool = False,
     ) -> aiohttp.ClientResponse:
         """POST JSON to a URL.
 
@@ -154,6 +157,7 @@ class AsyncHTTPClient:
             data: JSON-serializable data to send
             headers: Optional HTTP headers
             timeout: Optional timeout override
+            debug: Allow non-public URLs (loopback, private nets)
 
         Returns:
             The response object
@@ -161,7 +165,7 @@ class AsyncHTTPClient:
         Raises:
             ActivityUnavailableError: On connection/timeout errors
         """
-        await check_url(url)
+        await check_url(url, debug=debug)
 
         session = await self._get_session()
         if timeout is None:

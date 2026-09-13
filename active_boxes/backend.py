@@ -73,6 +73,7 @@ class Backend(abc.ABC):
             "Accept": "application/activity+json, application/json",
         }
         headers.update(kwargs.pop("headers", {}))
+        kwargs.setdefault("debug", self.debug_mode())
 
         resp = await client.get_json(url, headers=headers, **kwargs)
         return resp
@@ -150,6 +151,7 @@ class Backend(abc.ABC):
                 "Accept": "application/activity+json, application/json",
             }
 
+            kwargs.setdefault("debug", self.debug_mode())
             resp = await client.get_json(iri, headers=headers, **kwargs)
             return resp
 
@@ -218,5 +220,7 @@ class AsyncBackend(Backend):
         if headers:
             json_headers.update(headers)
 
-        resp = await client.post_json(url, data, headers=json_headers)
+        resp = await client.post_json(
+            url, data, headers=json_headers, debug=self.debug_mode()
+        )
         return resp

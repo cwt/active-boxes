@@ -484,6 +484,131 @@ class TestBackendAsync:
         assert result == [1, 2, 3]
 
 
+@pytest.mark.asyncio
+class TestDebugFlagThreading:
+    """The backend debug flag must reach the shared HTTP client.
+
+    Regression test: AsyncHTTPClient used to validate with debug=False
+    always, rejecting loopback URLs even for debug backends.
+    """
+
+    def _debug_backend(self, debug=True):
+        class DebugBackend(Backend):
+            def base_url(self) -> str:
+                return "https://test.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://test.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://test.com/note/{obj_id}"
+
+            def debug_mode(self) -> bool:
+                return debug
+
+        return DebugBackend()
+
+    async def test_fetch_json_threads_debug_true(self):
+        """fetch_json passes debug=True to the HTTP client."""
+        back = self._debug_backend(debug=True)
+
+        with (
+            mock.patch.object(back, "check_url"),
+            mock.patch("active_boxes.backend.get_http_client") as mock_client,
+        ):
+            mock_client_instance = mock.AsyncMock()
+            mock_client_instance.get_json.return_value = {"test": "data"}
+            mock_client.return_value = mock_client_instance
+
+            await back.fetch_json("http://localhost:5005/data")
+
+            call_kwargs = mock_client_instance.get_json.call_args[1]
+            assert call_kwargs["debug"] is True
+
+    async def test_fetch_json_threads_debug_false(self):
+        """fetch_json passes debug=False to the HTTP client by default."""
+        back = self._debug_backend(debug=False)
+
+        with (
+            mock.patch.object(back, "check_url"),
+            mock.patch("active_boxes.backend.get_http_client") as mock_client,
+        ):
+            mock_client_instance = mock.AsyncMock()
+            mock_client_instance.get_json.return_value = {"test": "data"}
+            mock_client.return_value = mock_client_instance
+
+            await back.fetch_json("https://example.com/data")
+
+            call_kwargs = mock_client_instance.get_json.call_args[1]
+            assert call_kwargs["debug"] is False
+
+    async def test_fetch_json_explicit_debug_wins(self):
+        """An explicit debug kwarg is not overridden by the backend."""
+        back = self._debug_backend(debug=True)
+
+        with (
+            mock.patch.object(back, "check_url"),
+            mock.patch("active_boxes.backend.get_http_client") as mock_client,
+        ):
+            mock_client_instance = mock.AsyncMock()
+            mock_client_instance.get_json.return_value = {"test": "data"}
+            mock_client.return_value = mock_client_instance
+
+            await back.fetch_json("https://example.com/data", debug=False)
+
+            call_kwargs = mock_client_instance.get_json.call_args[1]
+            assert call_kwargs["debug"] is False
+
+    async def test_fetch_iri_threads_debug_true(self):
+        """fetch_iri passes debug=True to the HTTP client."""
+        back = self._debug_backend(debug=True)
+
+        with (
+            mock.patch.object(back, "check_url"),
+            mock.patch("active_boxes.backend.get_http_client") as mock_client,
+        ):
+            mock_client_instance = mock.AsyncMock()
+            mock_client_instance.get_json.return_value = {
+                "id": "http://localhost:5005/x"
+            }
+            mock_client.return_value = mock_client_instance
+
+            await back.fetch_iri("http://localhost:5005/x")
+
+            call_kwargs = mock_client_instance.get_json.call_args[1]
+            assert call_kwargs["debug"] is True
+
+    async def test_post_json_threads_debug_true(self):
+        """AsyncBackend.post_json passes debug=True to the HTTP client."""
+
+        class DebugAsyncBackend(AsyncBackend):
+            def base_url(self) -> str:
+                return "https://test.com"
+
+            def activity_url(self, obj_id: str) -> str:
+                return f"https://test.com/activity/{obj_id}"
+
+            def note_url(self, obj_id: str) -> str:
+                return f"https://test.com/note/{obj_id}"
+
+            def debug_mode(self) -> bool:
+                return True
+
+        back = DebugAsyncBackend()
+
+        with (
+            mock.patch.object(back, "check_url"),
+            mock.patch("active_boxes.backend.get_http_client") as mock_client,
+        ):
+            mock_client_instance = mock.AsyncMock()
+            mock_client.return_value = mock_client_instance
+
+            await back.post_json("http://localhost:5005/inbox", {"test": "data"})
+
+            call_kwargs = mock_client_instance.post_json.call_args[1]
+            assert call_kwargs["debug"] is True
+
+
 class TestBackendSync:
     """Test Backend sync wrapper methods."""
 
