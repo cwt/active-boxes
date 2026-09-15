@@ -67,5 +67,7 @@ def parse_markdown(content: str) -> tuple[str, list[dict[str, str]]]:
     if mention_tags := mentionify(content)[1]:
         content, mention_tags = mentionify(content)
         tags.extend(mention_tags)
-    content = markdown(content, extensions=["mdx_linkify"])
+    content = markdown(
+        content, extensions=["mdx_linkify", "fenced_code", "nl2br"]
+    )
     return content, tags

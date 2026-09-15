@@ -83,3 +83,23 @@ def test_little_content_helper_tag(_):
                 "type": "Hashtag",
             }
         ]
+
+
+def test_little_content_helper_line_breaks():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    content, tags = content_helper.parse_markdown("line one\nline two")
+    assert content == "<p>line one<br>\nline two</p>"
+    assert tags == []
+
+
+def test_little_content_helper_fenced_code():
+    back = InMemBackend()
+    ap.use_backend(back)
+
+    content, tags = content_helper.parse_markdown("```python\nprint('hi')\n```")
+    assert content == (
+        "<pre><code class=\"language-python\">print('hi')\n</code></pre>"
+    )
+    assert tags == []
