@@ -55,7 +55,11 @@ def _build_signed_string(
         else:
             # Case-insensitive: real HTTP headers arrive capitalized
             # ("User-Agent") while the signed names are lowercase.
-            out.append(signed_header + ": " + (get_header(headers, signed_header) or ""))
+            out.append(
+                signed_header
+                + ": "
+                + (get_header(headers, signed_header) or "")
+            )
     return "\n".join(out)
 
 

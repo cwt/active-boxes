@@ -603,7 +603,9 @@ class TestDebugFlagThreading:
             mock_client_instance = mock.AsyncMock()
             mock_client.return_value = mock_client_instance
 
-            await back.post_json("http://localhost:5005/inbox", {"test": "data"})
+            await back.post_json(
+                "http://localhost:5005/inbox", {"test": "data"}
+            )
 
             call_kwargs = mock_client_instance.post_json.call_args[1]
             assert call_kwargs["debug"] is True

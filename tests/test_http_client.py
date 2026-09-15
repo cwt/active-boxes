@@ -863,7 +863,9 @@ async def test_get_json_passes_query_params():
             new_callable=mock.AsyncMock,
             return_value=mock_session,
         ),
-        mock.patch("active_boxes.http_client.check_url", new_callable=mock.AsyncMock),
+        mock.patch(
+            "active_boxes.http_client.check_url", new_callable=mock.AsyncMock
+        ),
     ):
         client = http_client.AsyncHTTPClient()
         result = await client.get_json(
@@ -896,7 +898,9 @@ async def test_post_json_passes_debug_flag():
         ) as mock_check,
     ):
         client = http_client.AsyncHTTPClient()
-        await client.post_json("http://localhost:9/inbox", {"test": "data"}, debug=True)
+        await client.post_json(
+            "http://localhost:9/inbox", {"test": "data"}, debug=True
+        )
 
     mock_check.assert_awaited_once_with("http://localhost:9/inbox", debug=True)
 

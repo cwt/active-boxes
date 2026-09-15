@@ -66,7 +66,9 @@ class AsyncHTTPClient:
     def __init__(self, timeout: int = 15) -> None:
         self.timeout = timeout
 
-    async def _get_session(self, timeout: int | None = None) -> aiohttp.ClientSession:
+    async def _get_session(
+        self, timeout: int | None = None
+    ) -> aiohttp.ClientSession:
         """Constructs a fresh session; callers must close it.
 
         Sessions are deliberately NOT shared: _run_sync wrappers drive
@@ -76,7 +78,9 @@ class AsyncHTTPClient:
         """
         if timeout is None:
             timeout = self.timeout
-        return aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout))
+        return aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=timeout)
+        )
 
     async def close(self) -> None:
         """Close the HTTP client.
