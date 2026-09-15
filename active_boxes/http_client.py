@@ -92,6 +92,7 @@ class AsyncHTTPClient:
         headers: dict[str, str] | None = None,
         timeout: int | None = None,
         debug: bool = False,
+        params: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Fetch JSON from a URL.
 
@@ -100,6 +101,7 @@ class AsyncHTTPClient:
             headers: Optional HTTP headers
             timeout: Optional timeout override
             debug: Allow non-public URLs (loopback, private nets)
+            params: Optional query string parameters
 
         Returns:
             Parsed JSON response
@@ -118,6 +120,7 @@ class AsyncHTTPClient:
         try:
             async with session.get(
                 url,
+                params=params,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
                 allow_redirects=True,

@@ -167,3 +167,48 @@ def test_webfinger_debug_mode(mock_check_url, mock_backend_check_url):
 
     with pytest.raises(urlutils.InvalidURLError):
         webfinger.webfinger_sync("@dev@localhost:8080", debug=True)
+
+
+@pytest.mark.asyncio
+async def test_webfinger_queries_acct_resource():
+    """webfinger resolves a handle into an acct: WebFinger query."""
+    backend = mock.AsyncMock()
+    backend.fetch_json.return_value = {"links": []}
+
+    with (
+        mock.patch.object(webfinger, "get_backend", return_value=backend),
+        mock.patch.object(webfinger, "check_url"),
+    ):
+        result = await webfinger.webfinger("@user@example.com")
+
+    assert result == {"links": []}
+    args, kwargs = backend.fetch_json.call_args
+    assert args[0] == "https://example.com/.well-known/webfinger"
+    assert kwargs["params"] == {"resource": "acct:user@example.com"}
+
+
+@pytest.mark.asyncio
+async def test_get_actor_url_returns_self_link():
+    """get_actor_url returns the activity+json self link."""
+    backend = mock.AsyncMock()
+    backend.fetch_json.return_value = {
+        "links": [
+            {
+                "rel": "http://webfinger.net/rel/profile-page",
+                "href": "https://example.com/@user",
+            },
+            {
+                "rel": "self",
+                "type": "application/activity+json",
+                "href": "https://example.com/users/user",
+            },
+        ]
+    }
+
+    with (
+        mock.patch.object(webfinger, "get_backend", return_value=backend),
+        mock.patch.object(webfinger, "check_url"),
+    ):
+        actor_url = await webfinger.get_actor_url("@user@example.com")
+
+    assert actor_url == "https://example.com/users/user"

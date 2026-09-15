@@ -846,6 +846,37 @@ async def test_get_json_debug_defaults_false():
 
 
 @pytest.mark.asyncio
+async def test_get_json_passes_query_params():
+    """get_json must forward query parameters (e.g. webfinger's resource)."""
+    mock_resp = mock.Mock()
+    mock_resp.status = 200
+    mock_resp.json = mock.AsyncMock(return_value={"ok": True})
+    mock_ctx = mock.AsyncMock()
+    mock_ctx.__aenter__.return_value = mock_resp
+    mock_session = mock.AsyncMock()
+    mock_session.get = mock.Mock(return_value=mock_ctx)
+
+    with (
+        mock.patch.object(
+            http_client.AsyncHTTPClient,
+            "_get_session",
+            new_callable=mock.AsyncMock,
+            return_value=mock_session,
+        ),
+        mock.patch("active_boxes.http_client.check_url", new_callable=mock.AsyncMock),
+    ):
+        client = http_client.AsyncHTTPClient()
+        result = await client.get_json(
+            "https://example.com/.well-known/webfinger",
+            params={"resource": "acct:user@example.com"},
+        )
+
+    assert result == {"ok": True}
+    _, kwargs = mock_session.get.call_args
+    assert kwargs["params"] == {"resource": "acct:user@example.com"}
+
+
+@pytest.mark.asyncio
 async def test_post_json_passes_debug_flag():
     """post_json must forward debug to URL validation (loopback support)."""
     mock_resp = mock.AsyncMock()
