@@ -521,6 +521,15 @@ def test_validate_actor_exceptions():
     with pytest.raises(ActivityNotFoundError):
         note._validate_actor("https://example.com/person/1")
 
+    # Test with backend that raises ActivityUnavailableError (should propagate)
+    class MockUnavailableBackend:
+        def fetch_iri_sync(self, iri):
+            raise ActivityUnavailableError("Unavailable")
+
+    ap.use_backend(MockUnavailableBackend())
+    with pytest.raises(ActivityUnavailableError):
+        note._validate_actor("https://example.com/person/1")
+
     # Test with backend that raises other exception (should become BadActivityError)
     class MockOtherErrorBackend:
         def fetch_iri_sync(self, iri):

@@ -605,7 +605,11 @@ class BaseActivity(metaclass=_ActivityMeta):
         obj_id = self._actor_id(obj)
         try:
             actor = backend.fetch_iri_sync(obj_id)
-        except (ActivityGoneError, ActivityNotFoundError):
+        except (
+            ActivityGoneError,
+            ActivityNotFoundError,
+            ActivityUnavailableError,
+        ):
             raise
         except Exception:  # noqa: BLE001 - any fetch failure is a bad activity
             raise BadActivityError(f"failed to validate actor {obj!r}")

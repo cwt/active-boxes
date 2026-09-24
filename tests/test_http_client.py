@@ -396,7 +396,7 @@ class TestAsyncHTTPClient:
 
     @pytest.mark.asyncio
     async def test_get_json_404_error(self):
-        """Test get_json raises ActivityUnavailableError on 404 (wrapped from ActivityNotFoundError)."""
+        """Test get_json raises ActivityNotFoundError on 404."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
 
@@ -412,16 +412,15 @@ class TestAsyncHTTPClient:
             mock_session = mock.AsyncMock()
             mock_session.get = mock.Mock(return_value=mock_cm)
 
-            # Note: ActivityNotFoundError gets caught and re-raised as ActivityUnavailableError
             with (
                 _client_session_for(mock_session),
-                pytest.raises(ap.ActivityUnavailableError),
+                pytest.raises(ap.ActivityNotFoundError),
             ):
                 await client.get_json("https://example.com/missing")
 
     @pytest.mark.asyncio
     async def test_get_json_410_error(self):
-        """Test get_json raises ActivityUnavailableError on 410 (wrapped from ActivityGoneError)."""
+        """Test get_json raises ActivityGoneError on 410."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
 
@@ -435,10 +434,9 @@ class TestAsyncHTTPClient:
             mock_session = mock.AsyncMock()
             mock_session.get = mock.Mock(return_value=mock_cm)
 
-            # Note: ActivityGoneError gets caught and re-raised as ActivityUnavailableError
             with (
                 _client_session_for(mock_session),
-                pytest.raises(ap.ActivityUnavailableError),
+                pytest.raises(ap.ActivityGoneError),
             ):
                 await client.get_json("https://example.com/gone")
 
@@ -498,7 +496,7 @@ class TestAsyncHTTPClient:
 
     @pytest.mark.asyncio
     async def test_get_json_invalid_json(self):
-        """Test get_json raises ActivityUnavailableError on invalid JSON response."""
+        """Test get_json raises NotAnActivityError on invalid JSON response."""
         with mock.patch.object(http_client, "check_url"):
             client = http_client.AsyncHTTPClient()
 
@@ -512,10 +510,9 @@ class TestAsyncHTTPClient:
             mock_session = mock.AsyncMock()
             mock_session.get = mock.Mock(return_value=mock_cm)
 
-            # Note: NotAnActivityError gets caught and re-raised as ActivityUnavailableError
             with (
                 _client_session_for(mock_session),
-                pytest.raises(ap.ActivityUnavailableError),
+                pytest.raises(ap.NotAnActivityError),
             ):
                 await client.get_json("https://example.com/invalid")
 

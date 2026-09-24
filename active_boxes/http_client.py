@@ -145,6 +145,13 @@ class AsyncHTTPClient:
                 except Exception as e:  # noqa: BLE001 - any decode failure
                     raise NotAnActivityError(f"{url} is not JSON: {e}")
 
+        except (
+            ActivityNotFoundError,
+            ActivityGoneError,
+            NotAnActivityError,
+            ActivityUnavailableError,
+        ):
+            raise
         except aiohttp.ClientConnectorError as e:
             raise ActivityUnavailableError(
                 f"unable to fetch {url}, connection error: {e}"
