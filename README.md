@@ -1,5 +1,10 @@
 # Active Boxes (Modernized Little Boxes)
 
+[![License](https://img.shields.io/pypi/l/active-boxes)](LICENSE)
+[![Python Compatibility](https://img.shields.io/pypi/pyversions/active-boxes)](#installation)
+[![PyPI Version](https://img.shields.io/pypi/v/active-boxes.svg)](https://pypi.org/project/active-boxes/)
+[![Ask DeepWiki](https://img.shields.io/badge/Ask-DeepWiki-blue)](https://deepwiki.com/cwt/active-boxes)<!-- [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/cwt/active-boxes) -->
+
 This project is a fork of [Little Boxes](https://github.com/tsileo/little-boxes) that has been modernized and relicensed from ISC to MIT.
 
 **Modernization Complete, ActivityPub Compliance In Progress**
